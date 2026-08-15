@@ -1,0 +1,89 @@
+package com.farmingpatchadvisor;
+
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.Graphics2D;
+import java.awt.FontMetrics;
+import java.time.Duration;
+import java.time.Instant;
+import javax.inject.Inject;
+import net.runelite.api.coords.WorldPoint;
+import net.runelite.client.ui.overlay.OverlayLayer;
+import net.runelite.client.ui.overlay.OverlayPanel;
+import net.runelite.client.ui.overlay.OverlayPosition;
+import net.runelite.client.ui.overlay.components.LineComponent;
+import net.runelite.client.ui.overlay.components.TitleComponent;
+
+final class PatchTimerOverlay extends OverlayPanel
+{
+	private static final Color READY_DARK = new Color(140, 0, 0);
+	private final PatchTimerManager timerManager;
+	private final FarmingPatchAdvisorConfig config;
+
+	@Inject
+	private PatchTimerOverlay(PatchTimerManager timerManager, FarmingPatchAdvisorConfig config)
+	{
+		this.timerManager = timerManager;
+		this.config = config;
+		setPosition(OverlayPosition.TOP_LEFT);
+		setLayer(OverlayLayer.ABOVE_WIDGETS);
+		setPriority(PRIORITY_LOW);
+	}
+
+	@Override
+	public Dimension render(Graphics2D graphics)
+	{
+		if (!config.showTimerOverlay() || timerManager.getTimers().isEmpty())
+		{
+			return null;
+		}
+
+		Instant now = Instant.now();
+		int contentWidth = graphics.getFontMetrics().stringWidth("Farming Patch Timers");
+		panelComponent.getChildren().add(TitleComponent.builder()
+			.text("Farming Patch Timers")
+			.build());
+
+		for (PatchTimer timer : timerManager.getTimers())
+		{
+			boolean ready = !now.isBefore(timer.getReadyAt());
+			Color readyColor = (System.currentTimeMillis() / 500L) % 2 == 0 ? Color.RED : READY_DARK;
+			WorldPoint location = timer.getPatchLocation();
+			String patch = timer.getCrop().getName() + " - " + PatchLocationCatalog.name(location);
+			if (!timer.isPlantedTimer())
+			{
+				patch += " " + timer.getEstimatedStage(now) + "/" + timer.getTotalStages();
+			}
+			String remaining = ready ? "READY" : formatRemaining(Duration.between(now, timer.getReadyAt()));
+			FontMetrics metrics = graphics.getFontMetrics();
+			contentWidth = Math.max(contentWidth, metrics.stringWidth(patch) + metrics.stringWidth(remaining) + 18);
+			panelComponent.getChildren().add(LineComponent.builder()
+				.left(patch)
+				.right(remaining)
+				.leftColor(ready ? readyColor : Color.WHITE)
+				.rightColor(ready ? readyColor : Color.GREEN)
+				.build());
+		}
+		panelComponent.setPreferredSize(new Dimension(contentWidth + 20, 0));
+
+		return super.render(graphics);
+	}
+
+	static String formatRemaining(Duration duration)
+	{
+		long seconds = Math.max(0, duration.getSeconds());
+		long days = seconds / 86400;
+		long hours = (seconds % 86400) / 3600;
+		long minutes = (seconds % 3600) / 60;
+		long secs = seconds % 60;
+		if (days > 0)
+		{
+			return String.format("%dd %02d:%02d", days, hours, minutes);
+		}
+		if (hours > 0)
+		{
+			return String.format("%d:%02d:%02d", hours, minutes, secs);
+		}
+		return String.format("%02d:%02d", minutes, secs);
+	}
+}
