@@ -1,11 +1,37 @@
 package com.farmingpatchadvisor;
 
 import java.util.Locale;
+import net.runelite.api.gameval.ObjectID;
 
 final class PatchClassifier
 {
 	private PatchClassifier()
 	{
+	}
+
+	static boolean isFarmRunPatchObject(int objectId)
+	{
+		switch (objectId)
+		{
+			case ObjectID.GARDEN_WHITE_TREE_PATCH:
+			case ObjectID.GARDEN_WHITE_TREE_WEEDED:
+			case ObjectID.GARDEN_WHITE_TREE_WEEDS_1:
+			case ObjectID.GARDEN_WHITE_TREE_WEEDS_2:
+			case ObjectID.GARDEN_WHITE_TREE_WEEDS_3:
+			case ObjectID.GARDEN_WHITE_TREE_SEEDLING:
+			case ObjectID.GARDEN_WHITE_TREE_1:
+			case ObjectID.GARDEN_WHITE_TREE_2:
+			case ObjectID.GARDEN_WHITE_TREE_3:
+			case ObjectID.GARDEN_WHITE_TREE_FULLYGROWN:
+			case ObjectID.GARDEN_WHITE_TREE_FRUIT_1:
+			case ObjectID.GARDEN_WHITE_TREE_FRUIT_2:
+			case ObjectID.GARDEN_WHITE_TREE_FRUIT_3:
+			case ObjectID.GARDEN_WHITE_TREE_FRUIT_4:
+			case ObjectID.GARDEN_WHITE_TREE_DEAD:
+				return false;
+			default:
+				return true;
+		}
 	}
 
 	static PatchType classify(String objectName)
@@ -31,6 +57,10 @@ final class PatchClassifier
 		if (name.contains("spirit tree patch"))
 		{
 			return PatchType.SPIRIT_TREE;
+		}
+		if (name.contains("redwood tree patch") || name.contains("redwood patch"))
+		{
+			return PatchType.REDWOOD;
 		}
 		if (name.contains("tree patch"))
 		{
@@ -83,10 +113,6 @@ final class PatchClassifier
 		if (name.contains("celastrus patch"))
 		{
 			return PatchType.CELASTRUS;
-		}
-		if (name.contains("redwood patch"))
-		{
-			return PatchType.REDWOOD;
 		}
 		if (name.contains("hespori patch"))
 		{

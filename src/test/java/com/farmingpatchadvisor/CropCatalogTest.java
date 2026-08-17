@@ -12,7 +12,7 @@ public class CropCatalogTest
 	{
 		assertEquals(1, CropCatalog.recommend(PatchType.GRAPEVINE, 99).getQuantity());
 		assertEquals(3, CropCatalog.recommend(PatchType.HOPS, 99).getQuantity());
-		assertEquals(2, CropCatalog.recommend(PatchType.SEAWEED, 99).getQuantity());
+		assertEquals(1, CropCatalog.recommend(PatchType.SEAWEED, 99).getQuantity());
 	}
 
 	@Test

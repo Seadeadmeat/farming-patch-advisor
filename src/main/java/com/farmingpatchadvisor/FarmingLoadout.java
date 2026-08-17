@@ -27,7 +27,6 @@ final class FarmingLoadout
 	private final Map<Integer, Integer> bankItems = new HashMap<>();
 	private final Map<Integer, Integer> inventoryItems = new HashMap<>();
 	private final Map<Integer, Integer> seedVaultItems = new HashMap<>();
-	private final Map<PatchType, Integer> patchCounts = buildPatchCounts();
 	private final Map<PatchType, SeedRunBaseline> seedRunBaselines = new EnumMap<>(PatchType.class);
 	private Set<Integer> cachedPaymentItemIds = Collections.emptySet();
 	private int cachedPaymentSelectionHash;
@@ -63,8 +62,13 @@ final class FarmingLoadout
 	synchronized Map<Integer, Crop> bestAvailableByItemId()
 	{
 		Map<Integer, Crop> selected = new HashMap<>();
+		Map<PatchType, Integer> patchCounts = buildPatchCounts();
 		for (PatchType patchType : PatchType.values())
 		{
+			if (patchCounts.getOrDefault(patchType, 0) == 0)
+			{
+				continue;
+			}
 			Crop crop = selectedOutsideSeedVault(patchType);
 			if (crop != null)
 			{
@@ -77,8 +81,13 @@ final class FarmingLoadout
 	synchronized Map<Integer, Crop> bestAvailableInSeedVaultByItemId()
 	{
 		Map<Integer, Crop> selected = new HashMap<>();
+		Map<PatchType, Integer> patchCounts = buildPatchCounts();
 		for (PatchType patchType : PatchType.values())
 		{
+			if (patchCounts.getOrDefault(patchType, 0) == 0)
+			{
+				continue;
+			}
 			Crop crop = CropOverrides.selected(config, patchType);
 			if (crop == null)
 			{
@@ -119,6 +128,7 @@ final class FarmingLoadout
 		Set<ChecklistPatch> includedPatches)
 	{
 		List<ChecklistItem> items = new ArrayList<>();
+		Map<PatchType, Integer> patchCounts = buildPatchCounts();
 		Map<Integer, PaymentTotal> payments = new LinkedHashMap<>();
 		RunProgress progress = runProgress();
 		for (PatchType patchType : PatchType.values())
@@ -193,9 +203,10 @@ final class FarmingLoadout
 		Set<ChecklistPatch> includedPatches)
 	{
 		Set<Integer> itemIds = new HashSet<>();
+		Map<PatchType, Integer> patchCounts = buildPatchCounts();
 		for (PatchType patchType : PatchType.values())
 		{
-			if (!includes(includedPatches, patchType))
+			if (!includes(includedPatches, patchType) || patchCounts.getOrDefault(patchType, 0) == 0)
 			{
 				continue;
 			}
@@ -222,7 +233,8 @@ final class FarmingLoadout
 
 	synchronized Set<Integer> protectionPaymentItemIds(Set<ChecklistPatch> includedPatches)
 	{
-		int selectionHash = includedPatches == null ? 0 : includedPatches.hashCode();
+		Map<PatchType, Integer> patchCounts = buildPatchCounts();
+		int selectionHash = 31 * (includedPatches == null ? 0 : includedPatches.hashCode()) + patchCounts.hashCode();
 		int farmingLevel = plugin.getFarmingLevel();
 		long now = System.currentTimeMillis();
 		if (now - cachedPaymentAtMillis < 500L && selectionHash == cachedPaymentSelectionHash
@@ -235,7 +247,7 @@ final class FarmingLoadout
 		RunProgress progress = runProgress();
 		for (PatchType patchType : PatchType.values())
 		{
-			if (!includes(includedPatches, patchType))
+			if (!includes(includedPatches, patchType) || patchCounts.getOrDefault(patchType, 0) == 0)
 			{
 				continue;
 			}
@@ -501,14 +513,14 @@ final class FarmingLoadout
 		return Math.max(0, patchCount - occupiedPatchCount) * seedsPerPatch;
 	}
 
-	private static Map<PatchType, Integer> buildPatchCounts()
+	private Map<PatchType, Integer> buildPatchCounts()
 	{
 		Map<PatchType, Integer> counts = new EnumMap<>(PatchType.class);
-		for (FarmRunPatch patch : FarmRunCatalog.patches())
+		for (FarmRunPatch patch : FarmRunCatalog.patches(config))
 		{
 			counts.merge(patch.getPatchType(), patch.getPatchCount(), Integer::sum);
 		}
-		return Collections.unmodifiableMap(counts);
+		return counts;
 	}
 
 	static final class ChecklistItem

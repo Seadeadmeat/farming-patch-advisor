@@ -36,16 +36,19 @@ final class PatchTimerManager
 
 	private final Client client;
 	private final ConfigManager configManager;
+	private final FarmingPatchAdvisorConfig config;
 	private final FarmingPatchAdvisorPlugin plugin;
 	private final Map<String, PatchTimer> timers = new LinkedHashMap<>();
 	private Inspection inspection;
 
 	@Inject
-	private PatchTimerManager(Client client, ConfigManager configManager, FarmingPatchAdvisorPlugin plugin)
+	private PatchTimerManager(Client client, ConfigManager configManager, FarmingPatchAdvisorPlugin plugin,
+		FarmingPatchAdvisorConfig config)
 	{
 		this.client = client;
 		this.configManager = configManager;
 		this.plugin = plugin;
+		this.config = config;
 	}
 
 	synchronized void load()
@@ -87,7 +90,14 @@ final class PatchTimerManager
 
 	synchronized Collection<PatchTimer> getTimers()
 	{
-		List<PatchTimer> sorted = new ArrayList<>(timers.values());
+		List<PatchTimer> sorted = new ArrayList<>();
+		for (PatchTimer timer : timers.values())
+		{
+			if (PatchLocationSelection.isEnabled(config, PatchLocationCatalog.name(timer.getPatchLocation())))
+			{
+				sorted.add(timer);
+			}
+		}
 		sorted.sort(Comparator.comparingInt(PatchLocationCatalog::routeRank)
 			.thenComparing(timer -> PatchLocationCatalog.name(timer.getPatchLocation()))
 			.thenComparing(PatchTimer::getReadyAt));
@@ -124,6 +134,10 @@ final class PatchTimerManager
 		{
 			return;
 		}
+		if (!PatchClassifier.isFarmRunPatchObject(event.getId()))
+		{
+			return;
+		}
 
 		ObjectComposition composition = client.getObjectDefinition(event.getId());
 		if (composition.getImpostorIds() != null)
@@ -137,6 +151,10 @@ final class PatchTimerManager
 		}
 
 		WorldPoint clicked = WorldPoint.fromScene(client, event.getParam0(), event.getParam1(), client.getPlane());
+		if (!PatchLocationSelection.isEnabled(config, PatchLocationCatalog.name(clicked)))
+		{
+			return;
+		}
 		WorldPoint anchor = plugin.getPatchAnchor(patchType, clicked);
 		PatchTimer nearby = findNearbyTimer(anchor, patchType, SAME_PATCH_DISTANCE);
 		if (nearby != null && !nearby.isPlantedTimer())
@@ -221,6 +239,10 @@ final class PatchTimerManager
 
 	private void beginInspection(MenuOptionClicked event)
 	{
+		if (!PatchClassifier.isFarmRunPatchObject(event.getId()))
+		{
+			return;
+		}
 		ObjectComposition composition = client.getObjectDefinition(event.getId());
 		if (composition.getImpostorIds() != null)
 		{
@@ -232,6 +254,10 @@ final class PatchTimerManager
 			return;
 		}
 		WorldPoint clicked = WorldPoint.fromScene(client, event.getParam0(), event.getParam1(), client.getPlane());
+		if (!PatchLocationSelection.isEnabled(config, PatchLocationCatalog.name(clicked)))
+		{
+			return;
+		}
 		WorldPoint anchor = plugin.getPatchAnchor(patchType, clicked);
 		Crop crop = CropCatalog.findInText(composition.getName(), patchType);
 		inspection = new Inspection(anchor, patchType, crop, System.currentTimeMillis());
@@ -239,6 +265,10 @@ final class PatchTimerManager
 
 	private void removeCompletedPatch(MenuOptionClicked event)
 	{
+		if (!PatchClassifier.isFarmRunPatchObject(event.getId()))
+		{
+			return;
+		}
 		ObjectComposition composition = client.getObjectDefinition(event.getId());
 		if (composition.getImpostorIds() != null)
 		{
@@ -250,6 +280,10 @@ final class PatchTimerManager
 			return;
 		}
 		WorldPoint clicked = WorldPoint.fromScene(client, event.getParam0(), event.getParam1(), client.getPlane());
+		if (!PatchLocationSelection.isEnabled(config, PatchLocationCatalog.name(clicked)))
+		{
+			return;
+		}
 		PatchTimer timer = findNearbyTimer(clicked, patchType, COMPLETION_DISTANCE);
 		if (timer != null)
 		{

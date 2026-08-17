@@ -22,7 +22,9 @@ public class ChecklistPatchTest
 
 		Set<ChecklistPatch> selected = ChecklistPatch.selected(config);
 		assertFalse(selected.contains(ChecklistPatch.HERB));
+		assertFalse(ChecklistPatch.includes(selected, PatchType.HERB));
 		assertTrue(selected.contains(ChecklistPatch.ALLOTMENT));
+		assertTrue(ChecklistPatch.includes(selected, PatchType.ALLOTMENT));
 		assertTrue(selected.contains(ChecklistPatch.TREE));
 	}
 }

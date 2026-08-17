@@ -15,8 +15,9 @@ A RuneLite farm-run assistant that recommends crops, tracks patch growth, and pr
 - Automatically advances inspected growth-stage estimates as time elapses.
 - Provides a movable, configurable full-run checklist using `inventory / still needed` quantities. Planting reduces the required seed or sapling count, and reusable tools disappear once they are in the inventory.
 - Includes exact gardener protection payments, including filled sacks and baskets, and counts noted payment items through RuneLite's item-variation mapping.
-- The side panel has a one-click checklist control and per-patch right-click reset actions. Settings can include or exclude individual patch types, tools, compost, and protection payments.
+- The side panel has a one-click checklist control and per-patch right-click reset actions. Settings can include or exclude individual patch types, inaccessible locations, tools, compost, and protection payments.
 - Adds a `Farm Run` button above the bank incinerator controls that filters the bank to the current checklist.
+- Shows a compact missing-items checklist beside the bank or seed vault, with configurable side and vertical alignment, while temporarily hiding the primary movable checklist.
 - Supports allotment, flower, herb, hops, bush, tree, fruit tree, hardwood, cactus, mushroom, belladonna, calquat, spirit tree, seaweed, grapevine, celastrus, redwood, Hespori, crystal tree, and coral patches.
 - Works offline and uses RuneLite `gameval` item constants rather than hard-coded item IDs.
 

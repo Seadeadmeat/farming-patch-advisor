@@ -1,9 +1,12 @@
 package com.farmingpatchadvisor;
 
+import net.runelite.api.gameval.ObjectID;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 public class PatchClassifierTest
 {
@@ -13,6 +16,7 @@ public class PatchClassifierTest
 		assertEquals(PatchType.HERB, PatchClassifier.classify("Herb patch"));
 		assertEquals(PatchType.FRUIT_TREE, PatchClassifier.classify("Fruit tree patch"));
 		assertEquals(PatchType.HARDWOOD_TREE, PatchClassifier.classify("Hardwood tree patch"));
+		assertEquals(PatchType.REDWOOD, PatchClassifier.classify("Redwood tree patch"));
 		assertEquals(PatchType.ALLOTMENT, PatchClassifier.classify("Allotment"));
 		assertEquals(PatchType.CORAL, PatchClassifier.classify("Coral patch"));
 	}
@@ -30,5 +34,15 @@ public class PatchClassifierTest
 		assertEquals(PatchType.HERB, PatchClassifier.classifyGrowing("Herbs"));
 		assertEquals(PatchType.TREE, PatchClassifier.classifyGrowing("Magic tree"));
 		assertEquals(PatchType.FRUIT_TREE, PatchClassifier.classifyGrowing("Dragonfruit tree"));
+	}
+
+	@Test
+	public void excludesVarrockQuestWhiteTreePatch()
+	{
+		assertFalse(PatchClassifier.isFarmRunPatchObject(ObjectID.GARDEN_WHITE_TREE_PATCH));
+		assertFalse(PatchClassifier.isFarmRunPatchObject(ObjectID.GARDEN_WHITE_TREE_FULLYGROWN));
+		assertFalse(PatchClassifier.isFarmRunPatchObject(ObjectID.GARDEN_WHITE_TREE_FRUIT_4));
+		assertFalse(PatchClassifier.isFarmRunPatchObject(ObjectID.GARDEN_WHITE_TREE_DEAD));
+		assertTrue(PatchClassifier.isFarmRunPatchObject(ObjectID.TREE_PATCH_WEEDED));
 	}
 }

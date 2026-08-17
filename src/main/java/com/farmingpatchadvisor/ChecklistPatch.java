@@ -51,6 +51,18 @@ public enum ChecklistPatch
 		return selected;
 	}
 
+	static boolean includes(Set<ChecklistPatch> selected, PatchType patchType)
+	{
+		for (ChecklistPatch patch : selected)
+		{
+			if (patch.patchType == patchType)
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
 	private boolean isEnabled(FarmingPatchAdvisorConfig config)
 	{
 		switch (this)

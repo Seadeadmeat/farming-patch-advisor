@@ -19,6 +19,19 @@ final class FarmRunCatalog
 		return PATCHES;
 	}
 
+	static List<FarmRunPatch> patches(FarmingPatchAdvisorConfig config)
+	{
+		List<FarmRunPatch> enabled = new ArrayList<>();
+		for (FarmRunPatch patch : PATCHES)
+		{
+			if (PatchLocationSelection.isEnabled(config, patch.getLocation()))
+			{
+				enabled.add(patch);
+			}
+		}
+		return enabled;
+	}
+
 	private static List<FarmRunPatch> build()
 	{
 		List<FarmRunPatch> patches = new ArrayList<>();

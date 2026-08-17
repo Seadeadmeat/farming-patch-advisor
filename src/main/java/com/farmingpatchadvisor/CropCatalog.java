@@ -195,7 +195,7 @@ final class CropCatalog
 		add(crops, PatchType.BELLADONNA, 1, crop("Belladonna", 63, ItemID.BELLADONNA_SEED));
 		add(crops, PatchType.CALQUAT, 1, crop("Calquat sapling", 72, ItemID.PLANTPOT_CALQUAT_SAPLING));
 		add(crops, PatchType.SPIRIT_TREE, 1, crop("Spirit sapling", 83, ItemID.PLANTPOT_SPIRIT_TREE_SAPLING));
-		add(crops, PatchType.SEAWEED, 2, crop("Seaweed", 23, ItemID.SEAWEED_SEED));
+		add(crops, PatchType.SEAWEED, 1, crop("Seaweed", 23, ItemID.SEAWEED_SEED));
 		add(crops, PatchType.GRAPEVINE, 1, crop("Grape", 36, ItemID.GRAPE_SEED));
 		add(crops, PatchType.CELASTRUS, 1, crop("Celastrus sapling", 85, ItemID.PLANTPOT_CELASTRUS_TREE_SAPLING));
 		add(crops, PatchType.REDWOOD, 1, crop("Redwood sapling", 90, ItemID.PLANTPOT_REDWOOD_TREE_SAPLING));

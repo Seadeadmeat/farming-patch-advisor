@@ -65,6 +65,9 @@ public class FarmingPatchAdvisorPlugin extends Plugin
 	private FarmRunChecklistOverlay checklistOverlay;
 
 	@Inject
+	private BankFarmRunOverlay bankFarmRunOverlay;
+
+	@Inject
 	private FarmingLoadout farmingLoadout;
 
 	@Inject
@@ -79,6 +82,9 @@ public class FarmingPatchAdvisorPlugin extends Plugin
 	@Inject
 	private FarmingPatchPanel patchPanel;
 
+	@Inject
+	private FarmingPatchAdvisorConfig config;
+
 	private NavigationButton navigationButton;
 
 	private final Set<GameObject> patchObjects = new HashSet<>();
@@ -91,6 +97,7 @@ public class FarmingPatchAdvisorPlugin extends Plugin
 		overlayManager.add(itemOverlay);
 		overlayManager.add(timerOverlay);
 		overlayManager.add(checklistOverlay);
+		overlayManager.add(bankFarmRunOverlay);
 		patchPanel.start();
 		navigationButton = NavigationButton.builder()
 			.tooltip("Farming Patch Advisor")
@@ -110,6 +117,7 @@ public class FarmingPatchAdvisorPlugin extends Plugin
 		overlayManager.remove(itemOverlay);
 		overlayManager.remove(timerOverlay);
 		overlayManager.remove(checklistOverlay);
+		overlayManager.remove(bankFarmRunOverlay);
 		if (navigationButton != null)
 		{
 			clientToolbar.removeNavigation(navigationButton);
@@ -214,12 +222,18 @@ public class FarmingPatchAdvisorPlugin extends Plugin
 
 	PatchType getPatchType(GameObject object)
 	{
+		if (!PatchClassifier.isFarmRunPatchObject(object.getId()))
+		{
+			return null;
+		}
 		ObjectComposition composition = client.getObjectDefinition(object.getId());
 		if (composition.getImpostorIds() != null)
 		{
 			composition = composition.getImpostor();
 		}
-		return composition == null ? null : PatchClassifier.classify(composition.getName());
+		PatchType patchType = composition == null ? null : PatchClassifier.classify(composition.getName());
+		return patchType != null && PatchLocationSelection.isEnabled(config,
+			PatchLocationCatalog.name(object.getWorldLocation())) ? patchType : null;
 	}
 
 	int getFarmingLevel()

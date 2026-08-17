@@ -10,32 +10,35 @@ import net.runelite.client.config.ConfigSection;
 @ConfigGroup("farming-patch-advisor")
 public interface FarmingPatchAdvisorConfig extends Config
 {
-	@ConfigSection(name = "Crop overrides", description = "Override automatic seed recommendations by patch type", position = 9, closedByDefault = true)
+	@ConfigSection(name = "Crop overrides", description = "Override automatic seed recommendations by patch type", position = 13, closedByDefault = true)
 	String cropOverridesSection = "cropOverridesSection";
 
-	@ConfigSection(name = "Allotment, flower & herb run", description = "Patch types used on the frequent crop run", position = 10)
+	@ConfigSection(name = "Allotment, flower & herb run", description = "Patch types used on the frequent crop run", position = 14)
 	String cropRunSection = "cropRunSection";
 
-	@ConfigSection(name = "Tree run", description = "Regular tree patches", position = 11)
+	@ConfigSection(name = "Tree run", description = "Regular tree patches", position = 15)
 	String treeRunSection = "treeRunSection";
 
-	@ConfigSection(name = "Fruit tree & calquat run", description = "Fruit-tree and calquat patches", position = 12)
+	@ConfigSection(name = "Fruit tree & calquat run", description = "Fruit-tree and calquat patches", position = 16)
 	String fruitTreeRunSection = "fruitTreeRunSection";
 
-	@ConfigSection(name = "Hardwood tree run", description = "Hardwood-tree patches", position = 13)
+	@ConfigSection(name = "Hardwood tree run", description = "Hardwood-tree patches", position = 17)
 	String hardwoodRunSection = "hardwoodRunSection";
 
-	@ConfigSection(name = "Hops run", description = "Hops patches", position = 14)
+	@ConfigSection(name = "Hops run", description = "Hops patches", position = 18)
 	String hopsRunSection = "hopsRunSection";
 
-	@ConfigSection(name = "Bush run", description = "Bush patches", position = 15)
+	@ConfigSection(name = "Bush run", description = "Bush patches", position = 19)
 	String bushRunSection = "bushRunSection";
 
-	@ConfigSection(name = "Cactus run", description = "Cactus patches", position = 16)
+	@ConfigSection(name = "Cactus run", description = "Cactus patches", position = 20)
 	String cactusRunSection = "cactusRunSection";
 
-	@ConfigSection(name = "Specialty patch run", description = "Special-purpose and unique farming patches", position = 17)
+	@ConfigSection(name = "Specialty patch run", description = "Special-purpose and unique farming patches", position = 21)
 	String specialtyRunSection = "specialtyRunSection";
+
+	@ConfigSection(name = "Patch locations", description = "Exclude areas you have not unlocked yet", position = 22, closedByDefault = true)
+	String patchLocationsSection = "patchLocationsSection";
 
 	@ConfigItem(
 		keyName = "showPatchLabels",
@@ -187,6 +190,66 @@ public interface FarmingPatchAdvisorConfig extends Config
 	{
 		return true;
 	}
+
+	@ConfigItem(
+		keyName = "showBankChecklistPanel",
+		name = "Bank-side checklist",
+		description = "Show a compact list of missing farm-run items beside the bank or seed vault",
+		position = 10
+	)
+	default boolean showBankChecklistPanel()
+	{
+		return true;
+	}
+
+	@ConfigItem(
+		keyName = "bankChecklistPosition",
+		name = "Bank checklist side",
+		description = "Choose which side of the bank or seed vault holds the compact checklist",
+		position = 11
+	)
+	default BankChecklistPosition bankChecklistPosition()
+	{
+		return BankChecklistPosition.AUTOMATIC;
+	}
+
+	@ConfigItem(
+		keyName = "bankChecklistVerticalPosition",
+		name = "Bank checklist height",
+		description = "Align the compact checklist with the top, middle, or bottom of the bank or seed vault",
+		position = 12
+	)
+	default BankChecklistVerticalPosition bankChecklistVerticalPosition()
+	{
+		return BankChecklistVerticalPosition.TOP;
+	}
+
+	@ConfigItem(keyName = "includeMorytania", name = "Morytania", description = "Include patches in Morytania", position = 0, section = patchLocationsSection)
+	default boolean includeMorytania() { return true; }
+	@ConfigItem(keyName = "includeKourend", name = "Kourend", description = "Include patches in Kourend", position = 1, section = patchLocationsSection)
+	default boolean includeKourend() { return true; }
+	@ConfigItem(keyName = "includeTrollStronghold", name = "Troll Stronghold", description = "Include the Troll Stronghold herb patch", position = 2, section = patchLocationsSection)
+	default boolean includeTrollStronghold() { return true; }
+	@ConfigItem(keyName = "includeHarmonyIsland", name = "Harmony Island", description = "Include patches on Harmony Island", position = 3, section = patchLocationsSection)
+	default boolean includeHarmonyIsland() { return true; }
+	@ConfigItem(keyName = "includeWeiss", name = "Weiss", description = "Include the Weiss herb patch", position = 4, section = patchLocationsSection)
+	default boolean includeWeiss() { return true; }
+	@ConfigItem(keyName = "includeFarmingGuild", name = "Farming Guild", description = "Include patches in the Farming Guild", position = 5, section = patchLocationsSection)
+	default boolean includeFarmingGuild() { return true; }
+	@ConfigItem(keyName = "includePrifddinas", name = "Prifddinas", description = "Include patches in Prifddinas", position = 6, section = patchLocationsSection)
+	default boolean includePrifddinas() { return true; }
+	@ConfigItem(keyName = "includeLletya", name = "Lletya", description = "Include the Lletya fruit-tree patch", position = 7, section = patchLocationsSection)
+	default boolean includeLletya() { return true; }
+	@ConfigItem(keyName = "includeFossilIsland", name = "Fossil Island", description = "Include hardwood and underwater seaweed patches", position = 8, section = patchLocationsSection)
+	default boolean includeFossilIsland() { return true; }
+	@ConfigItem(keyName = "includeEtceteria", name = "Etceteria", description = "Include patches on Etceteria", position = 9, section = patchLocationsSection)
+	default boolean includeEtceteria() { return true; }
+	@ConfigItem(keyName = "includeEntrana", name = "Entrana", description = "Include the Entrana hops patch", position = 10, section = patchLocationsSection)
+	default boolean includeEntrana() { return true; }
+	@ConfigItem(keyName = "includeVarlamore", name = "Varlamore", description = "Include patches across Varlamore", position = 11, section = patchLocationsSection)
+	default boolean includeVarlamore() { return true; }
+	@ConfigItem(keyName = "includeGreatConch", name = "Great Conch", description = "Include patches at the Great Conch", position = 12, section = patchLocationsSection)
+	default boolean includeGreatConch() { return true; }
 
 	@ConfigItem(keyName = "checklistAllotment", name = "Include allotments",
 		description = "Include allotment seeds", position = 0, section = cropRunSection)

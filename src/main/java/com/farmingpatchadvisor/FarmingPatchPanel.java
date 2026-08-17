@@ -12,6 +12,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import javax.inject.Inject;
 import javax.swing.BorderFactory;
 import javax.swing.AbstractButton;
@@ -101,15 +102,25 @@ final class FarmingPatchPanel extends PluginPanel
 	{
 		updateChecklistButton();
 		patches.removeAll();
+		Set<ChecklistPatch> selectedPatches = ChecklistPatch.selected(config);
 		List<PatchTimer> unmatchedTimers = new ArrayList<>(timerManager.getTimers());
+		unmatchedTimers.removeIf(timer -> !ChecklistPatch.includes(selectedPatches, timer.getPatchType()));
 		int order = 1;
+		List<FarmRunPatch> enabledCatalog = FarmRunCatalog.patches(config);
 		for (FarmRunType runType : FarmRunType.values())
 		{
+			boolean runSelected = enabledCatalog.stream().anyMatch(patch -> patch.getFarmRunType() == runType
+				&& ChecklistPatch.includes(selectedPatches, patch.getPatchType()));
+			if (!runSelected)
+			{
+				continue;
+			}
 			patches.add(createRunHeader(runType));
 			patches.add(Box.createRigidArea(new Dimension(0, 5)));
-			for (FarmRunPatch patch : FarmRunCatalog.patches())
+			for (FarmRunPatch patch : enabledCatalog)
 			{
-				if (patch.getFarmRunType() != runType)
+				if (patch.getFarmRunType() != runType
+					|| !ChecklistPatch.includes(selectedPatches, patch.getPatchType()))
 				{
 					continue;
 				}
