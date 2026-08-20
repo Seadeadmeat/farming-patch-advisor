@@ -25,6 +25,25 @@ public class CropCatalogTest
 	}
 
 	@Test
+	public void keepsExactInventoryItemNamesSeparateFromGrowingCropNames()
+	{
+		assertEquals("Ranarr", CropCatalog.findByName(PatchType.HERB, "Ranarr").getName());
+		assertEquals("Ranarr seed", CropCatalog.findByName(PatchType.HERB, "Ranarr").getItemName());
+		assertEquals("Seaweed spore", CropCatalog.recommend(PatchType.SEAWEED, 99).getItemName());
+		assertEquals("Mushroom spore", CropCatalog.recommend(PatchType.MUSHROOM, 99).getItemName());
+		assertEquals("Elkhorn frag", CropCatalog.findByName(PatchType.CORAL, "Elkhorn frag").getItemName());
+		assertEquals("Maple sapling", CropCatalog.findByName(PatchType.TREE, "Maple sapling").getItemName());
+	}
+
+	@Test
+	public void cropOverridesDisplayAndResolveExactItemNames()
+	{
+		assertEquals("Ranarr seed", CropOverrides.Herb.RANARR.toString());
+		assertEquals("Seaweed spore", CropOverrides.Seaweed.SEAWEED.toString());
+		assertEquals("Mushroom spore", CropOverrides.Mushroom.MUSHROOM.toString());
+	}
+
+	@Test
 	public void returnsNullBelowPatchRequirement()
 	{
 		assertNull(CropCatalog.recommend(PatchType.REDWOOD, 89));

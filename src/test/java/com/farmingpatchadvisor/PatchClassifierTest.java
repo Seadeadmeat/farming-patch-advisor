@@ -29,9 +29,20 @@ public class PatchClassifierTest
 	}
 
 	@Test
+	public void distinguishesPlantablePatchesFromDecorativeCropScenery()
+	{
+		assertTrue(PatchClassifier.hasAction(
+			new String[]{"Inspect", "Guide", "Harvest", null, null}, "Guide"));
+		assertFalse(PatchClassifier.hasAction(
+			new String[]{"Pick", null, null, null, null}, "Guide"));
+	}
+
+	@Test
 	public void recognizesGrowingCropNames()
 	{
 		assertEquals(PatchType.HERB, PatchClassifier.classifyGrowing("Herbs"));
+		assertEquals(PatchType.ALLOTMENT, PatchClassifier.classifyGrowing("Strawberry plant"));
+		assertEquals(PatchType.FLOWER, PatchClassifier.classifyGrowing("Flower patch"));
 		assertEquals(PatchType.TREE, PatchClassifier.classifyGrowing("Magic tree"));
 		assertEquals(PatchType.FRUIT_TREE, PatchClassifier.classifyGrowing("Dragonfruit tree"));
 	}

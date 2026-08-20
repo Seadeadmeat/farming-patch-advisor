@@ -25,23 +25,29 @@ final class FarmingLoadout
 	private final FarmingPatchAdvisorConfig config;
 	private final FarmingContractManager contractManager;
 	private final Provider<PatchTimerManager> timerManagerProvider;
+	private final FarmRunFilterState runFilterState;
 	private final Map<Integer, Integer> bankItems = new HashMap<>();
 	private final Map<Integer, Integer> inventoryItems = new HashMap<>();
+	private final Map<Integer, Integer> equipmentItems = new HashMap<>();
 	private final Map<Integer, Integer> seedVaultItems = new HashMap<>();
 	private final Map<PatchType, SeedRunBaseline> seedRunBaselines = new EnumMap<>(PatchType.class);
 	private Set<Integer> cachedPaymentItemIds = Collections.emptySet();
 	private int cachedPaymentSelectionHash;
 	private int cachedPaymentFarmingLevel;
 	private long cachedPaymentAtMillis;
+	private boolean bankScanned;
+	private boolean seedVaultScanned;
 
 	@Inject
 	private FarmingLoadout(FarmingPatchAdvisorPlugin plugin, FarmingPatchAdvisorConfig config,
-		FarmingContractManager contractManager, Provider<PatchTimerManager> timerManagerProvider)
+		FarmingContractManager contractManager, Provider<PatchTimerManager> timerManagerProvider,
+		FarmRunFilterState runFilterState)
 	{
 		this.plugin = plugin;
 		this.config = config;
 		this.contractManager = contractManager;
 		this.timerManagerProvider = timerManagerProvider;
+		this.runFilterState = runFilterState;
 	}
 
 	synchronized void onItemContainerChanged(ItemContainerChanged event)
@@ -49,16 +55,42 @@ final class FarmingLoadout
 		if (event.getContainerId() == InventoryID.BANK.getId())
 		{
 			copyItems(event.getItemContainer().getItems(), bankItems);
+			bankScanned = true;
 		}
 		else if (event.getContainerId() == InventoryID.INVENTORY.getId())
 		{
 			copyItems(event.getItemContainer().getItems(), inventoryItems);
 		}
+		else if (event.getContainerId() == InventoryID.EQUIPMENT.getId())
+		{
+			copyItems(event.getItemContainer().getItems(), equipmentItems);
+		}
 		else if (event.getContainerId() == InventoryID.SEED_VAULT.getId())
 		{
 			copyItems(event.getItemContainer().getItems(), seedVaultItems);
+			seedVaultScanned = true;
 		}
 		cachedPaymentAtMillis = 0;
+	}
+
+	synchronized void markBankScanned()
+	{
+		bankScanned = true;
+	}
+
+	synchronized void markSeedVaultScanned()
+	{
+		seedVaultScanned = true;
+	}
+
+	synchronized boolean isBankScanned()
+	{
+		return bankScanned;
+	}
+
+	synchronized boolean isSeedVaultScanned()
+	{
+		return seedVaultScanned;
 	}
 
 	synchronized Map<Integer, Crop> bestAvailableByItemId()
@@ -123,8 +155,11 @@ final class FarmingLoadout
 	{
 		bankItems.clear();
 		inventoryItems.clear();
+		equipmentItems.clear();
 		seedVaultItems.clear();
 		seedRunBaselines.clear();
+		bankScanned = false;
+		seedVaultScanned = false;
 		cachedPaymentAtMillis = 0;
 	}
 
@@ -157,7 +192,7 @@ final class FarmingLoadout
 				int consumedSeeds = progress.consumedSeedsByItemId.getOrDefault(crop.getItemId(), 0);
 				stableOwnedSeedCount(patchType, crop, occupiedPatches, consumedSeeds);
 				int owned = inventoryCount(crop.getItemId());
-				items.add(new ChecklistItem(crop.getName(), owned,
+				items.add(new ChecklistItem(crop.getItemName(), owned,
 					remainingSeedQuantity(patches, occupiedPatches, crop.getQuantity()), true));
 				if (includePayments)
 				{
@@ -177,9 +212,13 @@ final class FarmingLoadout
 		}
 		if (includeTools)
 		{
-			addToolIfMissing(items, "Rake", ItemID.RAKE);
-			addToolIfMissing(items, "Seed dibber", ItemID.DIBBER);
-			addToolIfMissing(items, "Spade", ItemID.SPADE);
+			for (ToolRequirement tool : requiredTools())
+			{
+				if (carriedCount(tool.itemId) == 0)
+				{
+					items.add(new ChecklistItem(tool.name, count(tool.itemId), 1, false));
+				}
+			}
 		}
 		if (includeCompost)
 		{
@@ -198,6 +237,34 @@ final class FarmingLoadout
 					.mapToInt(Map.Entry::getValue).sum();
 				items.add(new ChecklistItem("Ultracompost", inventoryCount(ItemID.BUCKET_ULTRACOMPOST),
 					totalPatches, false));
+			}
+		}
+		return items;
+	}
+
+	/**
+	 * Builds the active Farming Guild contract as a separate storage checklist. Contract items
+	 * deliberately do not follow the farm-run dropdown: an accepted contract remains actionable
+	 * regardless of which normal run is currently selected.
+	 */
+	synchronized List<ChecklistItem> contractChecklist(boolean includePayments)
+	{
+		FarmingContract contract = config.showFarmingContract() ? contractManager.getContract() : null;
+		if (contract == null)
+		{
+			return Collections.emptyList();
+		}
+
+		Crop crop = contract.getCrop();
+		List<ChecklistItem> items = new ArrayList<>();
+		items.add(new ChecklistItem(crop.getItemName(), inventoryCount(crop.getItemId()),
+			crop.getQuantity(), true));
+		if (includePayments)
+		{
+			for (ProtectionPayment payment : ProtectionPaymentCatalog.forCrop(crop))
+			{
+				items.add(new ChecklistItem("Payment: " + payment.getName(),
+					inventoryCountIncludingVariations(payment.getItemId()), payment.getQuantity(), false));
 			}
 		}
 		return items;
@@ -235,7 +302,7 @@ final class FarmingLoadout
 		addRequiredItemIds(itemIds, includeCompost, includeTools);
 		for (int remedyItemId : remedyItemIds())
 		{
-			if (inventoryCountIncludingVariations(remedyItemId) == 0)
+			if (carriedCountIncludingVariations(remedyItemId) == 0)
 			{
 				itemIds.add(remedyItemId);
 			}
@@ -246,23 +313,44 @@ final class FarmingLoadout
 	synchronized Set<Integer> remedyItemIds()
 	{
 		Set<Integer> itemIds = new HashSet<>();
-		PatchTimerManager timerManager = timerManagerProvider.get();
-		if (timerManager.hasDiseasedPatch(false))
+		boolean diseased = false;
+		boolean secateurs = false;
+		for (PatchTimer timer : timerManagerProvider.get().getTimers())
+		{
+			if (!runFilterState.includes(timer.getPatchType()) || !timer.isDiseased())
+			{
+				continue;
+			}
+			diseased = true;
+			secateurs |= PatchRemedy.usesSecateurs(timer.getPatchType());
+		}
+		if (diseased)
 		{
 			itemIds.add(ItemID.PLANT_CURE);
 		}
-		if (timerManager.hasDiseasedPatch(true))
+		if (secateurs)
 		{
-			itemIds.add(ItemID.SECATEURS);
+			itemIds.add(count(ItemID.FAIRY_ENCHANTED_SECATEURS) > 0
+				? ItemID.FAIRY_ENCHANTED_SECATEURS : ItemID.SECATEURS);
 		}
 		return itemIds;
 	}
 
 	synchronized boolean isRemedyItem(int itemId)
 	{
-		PatchTimerManager timerManager = timerManagerProvider.get();
-		return (itemId == ItemID.PLANT_CURE && timerManager.hasDiseasedPatch(false))
-			|| (itemId == ItemID.SECATEURS && timerManager.hasDiseasedPatch(true));
+		return remedyItemIds().contains(itemId);
+	}
+
+	synchronized boolean isRequiredToolItem(int itemId)
+	{
+		for (ToolRequirement tool : requiredTools())
+		{
+			if (tool.itemId == itemId)
+			{
+				return true;
+			}
+		}
+		return false;
 	}
 
 	synchronized int inventoryQuantity(int itemId)
@@ -297,6 +385,14 @@ final class FarmingLoadout
 				crop = CropCatalog.recommend(patchType, plugin.getFarmingLevel());
 			}
 			for (ProtectionPayment payment : ProtectionPaymentCatalog.forCrop(crop))
+			{
+				itemIds.add(payment.getItemId());
+			}
+		}
+		FarmingContract contract = config.showFarmingContract() ? contractManager.getContract() : null;
+		if (contract != null && runFilterState.includes(contract.getCrop().getPatchType()))
+		{
+			for (ProtectionPayment payment : ProtectionPaymentCatalog.forCrop(contract.getCrop()))
 			{
 				itemIds.add(payment.getItemId());
 			}
@@ -352,7 +448,7 @@ final class FarmingLoadout
 		RunProgress progress = new RunProgress();
 		for (PatchTimer timer : timerManagerProvider.get().getTimers())
 		{
-			if (timer.isDead())
+			if (timer.isDead() || !runFilterState.includes(timer.getPatchType()))
 			{
 				continue;
 			}
@@ -433,7 +529,7 @@ final class FarmingLoadout
 	private int count(int itemId)
 	{
 		return bankItems.getOrDefault(itemId, 0) + inventoryItems.getOrDefault(itemId, 0)
-			+ seedVaultItems.getOrDefault(itemId, 0);
+			+ equipmentItems.getOrDefault(itemId, 0) + seedVaultItems.getOrDefault(itemId, 0);
 	}
 
 	private int inventoryCount(int itemId)
@@ -451,14 +547,6 @@ final class FarmingLoadout
 		return total;
 	}
 
-	private void addToolIfMissing(List<ChecklistItem> items, String name, int itemId)
-	{
-		if (inventoryCount(itemId) == 0)
-		{
-			items.add(new ChecklistItem(name, count(itemId), 1, false));
-		}
-	}
-
 	private int countIncludingVariations(int itemId)
 	{
 		int total = 0;
@@ -473,9 +561,13 @@ final class FarmingLoadout
 	{
 		if (includeTools)
 		{
-			addItemIdIfMissingFromInventory(itemIds, ItemID.RAKE);
-			addItemIdIfMissingFromInventory(itemIds, ItemID.DIBBER);
-			addItemIdIfMissingFromInventory(itemIds, ItemID.SPADE);
+			for (ToolRequirement tool : requiredTools())
+			{
+				if (carriedCount(tool.itemId) == 0)
+				{
+					itemIds.add(tool.itemId);
+				}
+			}
 		}
 		if (includeCompost)
 		{
@@ -494,7 +586,7 @@ final class FarmingLoadout
 	private void addContractSeed(Map<Integer, Crop> selected)
 	{
 		FarmingContract contract = config.showFarmingContract() ? contractManager.getContract() : null;
-		if (contract != null)
+		if (contract != null && runFilterState.includes(contract.getCrop().getPatchType()))
 		{
 			selected.put(contract.getCrop().getItemId(), contract.getCrop());
 		}
@@ -523,6 +615,91 @@ final class FarmingLoadout
 		{
 			itemIds.add(itemId);
 		}
+	}
+
+	private List<ToolRequirement> requiredTools()
+	{
+		Map<PatchType, Integer> patchCounts = buildPatchCounts();
+		List<ToolRequirement> tools = new ArrayList<>();
+		if (patchCounts.isEmpty())
+		{
+			return tools;
+		}
+		tools.add(new ToolRequirement("Rake", ItemID.RAKE));
+		tools.add(new ToolRequirement("Spade", ItemID.SPADE));
+		if (patchCounts.keySet().stream().anyMatch(PatchType::usesDibber))
+		{
+			tools.add(new ToolRequirement("Seed dibber", ItemID.DIBBER));
+		}
+		if (patchCounts.keySet().stream().anyMatch(FarmingLoadout::isYieldBoostedByMagicSecateurs)
+			&& count(ItemID.FAIRY_ENCHANTED_SECATEURS) > 0)
+		{
+			tools.add(new ToolRequirement("Magic secateurs", ItemID.FAIRY_ENCHANTED_SECATEURS));
+		}
+		if (patchCounts.keySet().stream().anyMatch(PatchType::canBeWatered))
+		{
+			int wateringCan = bestOwnedWateringCan();
+			if (wateringCan >= 0)
+			{
+				tools.add(new ToolRequirement(wateringCanName(wateringCan), wateringCan));
+			}
+		}
+		return tools;
+	}
+
+	private int bestOwnedWateringCan()
+	{
+		int[] wateringCans = {
+			ItemID.ZEAH_WATERINGCAN, ItemID.WATERING_CAN_8, ItemID.WATERING_CAN_7,
+			ItemID.WATERING_CAN_6, ItemID.WATERING_CAN_5, ItemID.WATERING_CAN_4,
+			ItemID.WATERING_CAN_3, ItemID.WATERING_CAN_2, ItemID.WATERING_CAN_1
+		};
+		for (int itemId : wateringCans)
+		{
+			if (count(itemId) > 0)
+			{
+				return itemId;
+			}
+		}
+		return -1;
+	}
+
+	private static String wateringCanName(int itemId)
+	{
+		switch (itemId)
+		{
+			case ItemID.ZEAH_WATERINGCAN: return "Gricoller's can";
+			case ItemID.WATERING_CAN_8: return "Watering can(8)";
+			case ItemID.WATERING_CAN_7: return "Watering can(7)";
+			case ItemID.WATERING_CAN_6: return "Watering can(6)";
+			case ItemID.WATERING_CAN_5: return "Watering can(5)";
+			case ItemID.WATERING_CAN_4: return "Watering can(4)";
+			case ItemID.WATERING_CAN_3: return "Watering can(3)";
+			case ItemID.WATERING_CAN_2: return "Watering can(2)";
+			case ItemID.WATERING_CAN_1: return "Watering can(1)";
+			default: throw new IllegalArgumentException("Unknown watering can item " + itemId);
+		}
+	}
+
+	static boolean isYieldBoostedByMagicSecateurs(PatchType patchType)
+	{
+		return patchType == PatchType.ALLOTMENT || patchType == PatchType.HERB
+			|| patchType == PatchType.GRAPEVINE || patchType == PatchType.HOPS;
+	}
+
+	private int carriedCount(int itemId)
+	{
+		return inventoryItems.getOrDefault(itemId, 0) + equipmentItems.getOrDefault(itemId, 0);
+	}
+
+	private int carriedCountIncludingVariations(int itemId)
+	{
+		int total = 0;
+		for (int variationId : ItemVariationMapping.getVariations(itemId))
+		{
+			total += carriedCount(variationId);
+		}
+		return total;
 	}
 
 	private static boolean includes(Set<ChecklistPatch> includedPatches, PatchType patchType)
@@ -587,7 +764,10 @@ final class FarmingLoadout
 		Map<PatchType, Integer> counts = new EnumMap<>(PatchType.class);
 		for (FarmRunPatch patch : FarmRunCatalog.patches(config))
 		{
-			counts.merge(patch.getPatchType(), patch.getPatchCount(), Integer::sum);
+			if (runFilterState.includes(patch.getPatchType()))
+			{
+				counts.merge(patch.getPatchType(), patch.getPatchCount(), Integer::sum);
+			}
 		}
 		return counts;
 	}
@@ -647,6 +827,18 @@ final class FarmingLoadout
 		{
 			this.cropItemId = cropItemId;
 			this.owned = owned;
+		}
+	}
+
+	private static final class ToolRequirement
+	{
+		private final String name;
+		private final int itemId;
+
+		private ToolRequirement(String name, int itemId)
+		{
+			this.name = name;
+			this.itemId = itemId;
 		}
 	}
 }

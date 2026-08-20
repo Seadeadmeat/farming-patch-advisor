@@ -144,11 +144,16 @@ final class PatchClassifier
 
 	static boolean hasAction(ObjectComposition composition, String expected)
 	{
-		if (composition == null || composition.getActions() == null)
+		return composition != null && hasAction(composition.getActions(), expected);
+	}
+
+	static boolean hasAction(String[] actions, String expected)
+	{
+		if (actions == null)
 		{
 			return false;
 		}
-		for (String action : composition.getActions())
+		for (String action : actions)
 		{
 			if (expected.equalsIgnoreCase(action))
 			{

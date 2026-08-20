@@ -71,6 +71,9 @@ public class FarmingPatchAdvisorPlugin extends Plugin
 	private BankFarmRunOverlay bankFarmRunOverlay;
 
 	@Inject
+	private StorageScanReminderOverlay storageScanReminderOverlay;
+
+	@Inject
 	private FarmingLoadout farmingLoadout;
 
 	@Inject
@@ -105,6 +108,7 @@ public class FarmingPatchAdvisorPlugin extends Plugin
 		overlayManager.add(timerOverlay);
 		overlayManager.add(checklistOverlay);
 		overlayManager.add(bankFarmRunOverlay);
+		overlayManager.add(storageScanReminderOverlay);
 		patchPanel.start();
 		navigationButton = NavigationButton.builder()
 			.tooltip("Farming Patch Advisor")
@@ -125,6 +129,7 @@ public class FarmingPatchAdvisorPlugin extends Plugin
 		overlayManager.remove(timerOverlay);
 		overlayManager.remove(checklistOverlay);
 		overlayManager.remove(bankFarmRunOverlay);
+		overlayManager.remove(storageScanReminderOverlay);
 		if (navigationButton != null)
 		{
 			clientToolbar.removeNavigation(navigationButton);
@@ -227,7 +232,12 @@ public class FarmingPatchAdvisorPlugin extends Plugin
 	{
 		if (event.getGroupId() == InterfaceID.BANKMAIN)
 		{
+			farmingLoadout.markBankScanned();
 			bankChecklistFilter.addButton();
+		}
+		else if (event.getGroupId() == InterfaceID.SEED_VAULT)
+		{
+			farmingLoadout.markSeedVaultScanned();
 		}
 	}
 
@@ -278,9 +288,17 @@ public class FarmingPatchAdvisorPlugin extends Plugin
 			composition = composition.getImpostor();
 		}
 		String name = composition == null ? "" : composition.getName();
-		PatchType patchType = PatchClassifier.classify(name);
-		boolean farmingState = PatchClassifier.hasAction(composition, "Inspect")
-			&& PatchClassifier.hasAction(composition, "Guide");
+		// Decorative fields and crop scenery can share names with real Farming crops, but
+		// only an actual player-usable Farming patch exposes the Guide action.
+		if (!PatchClassifier.hasAction(composition, "Guide"))
+		{
+			return null;
+		}
+		// Growing objects often use the crop name (for example "Strawberry plant") instead
+		// of the empty patch name. Classify that live name before consulting a nearby timer,
+		// otherwise an adjacent one-tile patch can inherit the allotment timer after planting.
+		PatchType patchType = PatchClassifier.classifyGrowing(name);
+		boolean farmingState = PatchClassifier.hasAction(composition, "Inspect");
 		if (patchType == null && farmingState)
 		{
 			PatchTimer timer = timerManager.findTimer(object.getWorldLocation(), 4);
@@ -288,6 +306,20 @@ public class FarmingPatchAdvisorPlugin extends Plugin
 		}
 		return patchType != null && PatchLocationSelection.isEnabled(config,
 			PatchLocationCatalog.name(object.getWorldLocation())) ? patchType : null;
+	}
+
+	Crop getPatchCrop(GameObject object, PatchType patchType)
+	{
+		if (patchType == null)
+		{
+			return null;
+		}
+		ObjectComposition composition = client.getObjectDefinition(object.getId());
+		if (composition.getImpostorIds() != null)
+		{
+			composition = composition.getImpostor();
+		}
+		return composition == null ? null : CropCatalog.findInText(composition.getName(), patchType);
 	}
 
 	int getFarmingLevel()

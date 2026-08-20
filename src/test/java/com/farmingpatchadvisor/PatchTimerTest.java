@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.time.Instant;
 import net.runelite.api.coords.WorldPoint;
 import org.junit.Test;
+import net.runelite.api.Point;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -11,6 +12,29 @@ import static org.junit.Assert.assertTrue;
 
 public class PatchTimerTest
 {
+	@Test
+	public void groupsAdjacentPatchObjectsUsingTheirFullSceneFootprints()
+	{
+		assertTrue(FarmingPatchOverlay.sceneAreasTouch(
+			new Point(10, 10), new Point(13, 13), new Point(14, 11), new Point(16, 13)));
+		assertTrue(FarmingPatchOverlay.sceneAreasTouch(
+			new Point(10, 10), new Point(13, 13), new Point(14, 14), new Point(16, 16)));
+		assertFalse(FarmingPatchOverlay.sceneAreasTouch(
+			new Point(10, 10), new Point(13, 13), new Point(15, 10), new Point(17, 13)));
+	}
+
+	@Test
+	public void appliesAPlantedContractOnlyToItsMatchingAllotment()
+	{
+		WorldPoint plantedPatch = new WorldPoint(1240, 3720, 0);
+		assertTrue(FarmingPatchOverlay.belongsToPlantedContractPatch(
+			new WorldPoint(1241, 3721, 0), plantedPatch));
+		assertFalse(FarmingPatchOverlay.belongsToPlantedContractPatch(
+			new WorldPoint(1245, 3720, 0), plantedPatch));
+		assertFalse(FarmingPatchOverlay.belongsToPlantedContractPatch(
+			new WorldPoint(1240, 3720, 1), plantedPatch));
+	}
+
 	@Test
 	public void advancesInspectedStageFromElapsedTime()
 	{
@@ -128,5 +152,32 @@ public class PatchTimerTest
 		assertTrue(PatchTimerManager.isCompostedMessage(
 			"This is a ranarr plant. The soil has been treated with ultracompost."));
 		assertTrue(PatchTimerManager.isWateredMessage("The allotment has been watered."));
+	}
+
+	@Test
+	public void onlyCollapsesPatchTypesWithOnePhysicalPatchPerLocation()
+	{
+		assertTrue(PatchTimerManager.hasSinglePatchPerLocation(PatchType.TREE));
+		assertTrue(PatchTimerManager.hasSinglePatchPerLocation(PatchType.HERB));
+		assertFalse(PatchTimerManager.hasSinglePatchPerLocation(PatchType.ALLOTMENT));
+		assertFalse(PatchTimerManager.hasSinglePatchPerLocation(PatchType.SEAWEED));
+		assertFalse(PatchTimerManager.hasSinglePatchPerLocation(PatchType.HARDWOOD_TREE));
+	}
+
+	@Test
+	public void contractPatchRequiresClearingWhenAnotherCropIsGrowing()
+	{
+		Instant now = Instant.parse("2026-08-20T00:00:00Z");
+		Crop maple = CropCatalog.findByName(PatchType.TREE, "Maple sapling");
+		Crop yew = CropCatalog.findByName(PatchType.TREE, "Yew sapling");
+		PatchTimer timer = new PatchTimer(new WorldPoint(0, 0, 0), PatchType.TREE,
+			maple, now, now.plus(Duration.ofHours(5)));
+
+		assertTrue(FarmingPatchOverlay.requiresClearingForContract(timer.getCrop(), yew));
+		assertFalse(FarmingPatchOverlay.requiresClearingForContract(timer.getCrop(), maple));
+		assertFalse(FarmingPatchOverlay.requiresClearingForContract((Crop) null, yew));
+		assertTrue(FarmingPatchOverlay.usesContractGroundOutline(true, maple));
+		assertFalse(FarmingPatchOverlay.usesContractGroundOutline(false, maple));
+		assertFalse(FarmingPatchOverlay.usesContractGroundOutline(true, null));
 	}
 }

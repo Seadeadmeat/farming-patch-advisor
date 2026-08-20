@@ -4,6 +4,8 @@ import java.util.EnumSet;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 public class FarmRunTypeTest
 {
@@ -22,8 +24,20 @@ public class FarmRunTypeTest
 	@Test
 	public void usesExpectedFarmRunCategories()
 	{
-		assertEquals(FarmRunType.ALLOTMENT_FLOWER_HERB, FarmRunType.forPatchType(PatchType.HERB));
+		assertEquals(FarmRunType.ALLOTMENT_FLOWER, FarmRunType.forPatchType(PatchType.ALLOTMENT));
+		assertEquals(FarmRunType.ALLOTMENT_FLOWER, FarmRunType.forPatchType(PatchType.FLOWER));
+		assertEquals(FarmRunType.HERB, FarmRunType.forPatchType(PatchType.HERB));
 		assertEquals(FarmRunType.FRUIT_TREE_CALQUAT, FarmRunType.forPatchType(PatchType.CALQUAT));
 		assertEquals(FarmRunType.SPECIALTY, FarmRunType.forPatchType(PatchType.SEAWEED));
+	}
+
+	@Test
+	public void magicSecateursOnlyApplyToWikiListedYieldPatches()
+	{
+		assertTrue(FarmingLoadout.isYieldBoostedByMagicSecateurs(PatchType.HERB));
+		assertTrue(FarmingLoadout.isYieldBoostedByMagicSecateurs(PatchType.ALLOTMENT));
+		assertTrue(FarmingLoadout.isYieldBoostedByMagicSecateurs(PatchType.HOPS));
+		assertTrue(FarmingLoadout.isYieldBoostedByMagicSecateurs(PatchType.GRAPEVINE));
+		assertFalse(FarmingLoadout.isYieldBoostedByMagicSecateurs(PatchType.TREE));
 	}
 }

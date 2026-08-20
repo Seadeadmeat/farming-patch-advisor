@@ -2,7 +2,8 @@ package com.farmingpatchadvisor;
 
 enum FarmRunType
 {
-	ALLOTMENT_FLOWER_HERB("Allotment, Flower & Herb Run"),
+	ALLOTMENT_FLOWER("Allotment & Flower Run"),
+	HERB("Herb Run"),
 	TREE("Tree Run"),
 	FRUIT_TREE_CALQUAT("Fruit Tree & Calquat Run"),
 	HARDWOOD_TREE("Hardwood Tree Run"),
@@ -29,8 +30,9 @@ enum FarmRunType
 		{
 			case ALLOTMENT:
 			case FLOWER:
+				return ALLOTMENT_FLOWER;
 			case HERB:
-				return ALLOTMENT_FLOWER_HERB;
+				return HERB;
 			case TREE:
 				return TREE;
 			case FRUIT_TREE:

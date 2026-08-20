@@ -10,34 +10,34 @@ import net.runelite.client.config.ConfigSection;
 @ConfigGroup("farming-patch-advisor")
 public interface FarmingPatchAdvisorConfig extends Config
 {
-	@ConfigSection(name = "Crop overrides", description = "Override automatic seed recommendations by patch type", position = 15, closedByDefault = true)
+	@ConfigSection(name = "Crop overrides", description = "Override automatic seed recommendations by patch type", position = 16, closedByDefault = true)
 	String cropOverridesSection = "cropOverridesSection";
 
-	@ConfigSection(name = "Allotment, flower & herb run", description = "Patch types used on the frequent crop run", position = 16)
+	@ConfigSection(name = "Allotment, flower & herb run", description = "Patch types used on the frequent crop run", position = 17)
 	String cropRunSection = "cropRunSection";
 
-	@ConfigSection(name = "Tree run", description = "Regular tree patches", position = 17)
+	@ConfigSection(name = "Tree run", description = "Regular tree patches", position = 18)
 	String treeRunSection = "treeRunSection";
 
-	@ConfigSection(name = "Fruit tree & calquat run", description = "Fruit-tree and calquat patches", position = 18)
+	@ConfigSection(name = "Fruit tree & calquat run", description = "Fruit-tree and calquat patches", position = 19)
 	String fruitTreeRunSection = "fruitTreeRunSection";
 
-	@ConfigSection(name = "Hardwood tree run", description = "Hardwood-tree patches", position = 19)
+	@ConfigSection(name = "Hardwood tree run", description = "Hardwood-tree patches", position = 20)
 	String hardwoodRunSection = "hardwoodRunSection";
 
-	@ConfigSection(name = "Hops run", description = "Hops patches", position = 20)
+	@ConfigSection(name = "Hops run", description = "Hops patches", position = 21)
 	String hopsRunSection = "hopsRunSection";
 
-	@ConfigSection(name = "Bush run", description = "Bush patches", position = 21)
+	@ConfigSection(name = "Bush run", description = "Bush patches", position = 22)
 	String bushRunSection = "bushRunSection";
 
-	@ConfigSection(name = "Cactus run", description = "Cactus patches", position = 22)
+	@ConfigSection(name = "Cactus run", description = "Cactus patches", position = 23)
 	String cactusRunSection = "cactusRunSection";
 
-	@ConfigSection(name = "Specialty patch run", description = "Special-purpose and unique farming patches", position = 23)
+	@ConfigSection(name = "Specialty patch run", description = "Special-purpose and unique farming patches", position = 24)
 	String specialtyRunSection = "specialtyRunSection";
 
-	@ConfigSection(name = "Patch locations", description = "Exclude areas you have not unlocked yet", position = 24, closedByDefault = true)
+	@ConfigSection(name = "Patch locations", description = "Exclude areas you have not unlocked yet", position = 25, closedByDefault = true)
 	String patchLocationsSection = "patchLocationsSection";
 
 	@ConfigItem(
@@ -93,6 +93,17 @@ public interface FarmingPatchAdvisorConfig extends Config
 	default SeedSelectionMode seedSelectionMode()
 	{
 		return SeedSelectionMode.HIGHEST_AVAILABLE;
+	}
+
+	@ConfigItem(
+		keyName = "showStorageScanReminder",
+		name = "Bank scan reminder",
+		description = "Flash a reminder until both the bank and Seed Vault have been opened for accurate patch recommendations",
+		position = 15
+	)
+	default boolean showStorageScanReminder()
+	{
+		return true;
 	}
 
 	@ConfigItem(keyName = "allotmentOverride", name = "Allotment", description = "Crop to recommend for allotment patches", position = 0, section = cropOverridesSection)

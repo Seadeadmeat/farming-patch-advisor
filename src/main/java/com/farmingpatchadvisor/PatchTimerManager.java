@@ -102,7 +102,7 @@ final class PatchTimerManager
 					Instant.ofEpochMilli(Long.parseLong(fields[5])),
 					Instant.ofEpochMilli(Long.parseLong(fields[6])), plantedTimer, observedStage,
 					totalStages, dead, diseased, compostApplied, watered);
-				timers.put(timer.key(), timer);
+				loadTimer(timer);
 			}
 			catch (RuntimeException ex)
 			{
@@ -149,7 +149,7 @@ final class PatchTimerManager
 
 	synchronized PatchTimer findTimer(WorldPoint location, PatchType patchType, int maximumDistance)
 	{
-		return findNearbyTimer(location, patchType, maximumDistance);
+		return findSamePatch(location, patchType, maximumDistance);
 	}
 
 	synchronized PatchTimer findTimer(WorldPoint location, int maximumDistance)
@@ -218,8 +218,8 @@ final class PatchTimerManager
 			return;
 		}
 		WorldPoint anchor = plugin.getPatchAnchor(patchType, clicked);
-		PatchTimer nearby = findNearbyTimer(anchor, patchType, SAME_PATCH_DISTANCE);
-		if (nearby != null && (!nearby.isPlantedTimer() || nearby.isDead() || nearby.isDiseased()))
+		PatchTimer nearby = findSamePatch(anchor, patchType, SAME_PATCH_DISTANCE);
+		if (nearby != null)
 		{
 			timers.remove(nearby.key());
 		}
@@ -321,7 +321,7 @@ final class PatchTimerManager
 		}
 		PatchTimer existing = patchType == null
 			? findNearestTimer(object.getWorldLocation(), COMPLETION_DISTANCE)
-			: findNearbyTimer(object.getWorldLocation(), patchType,
+			: findSamePatch(object.getWorldLocation(), patchType,
 				dead || diseased ? COMPLETION_DISTANCE : SAME_PATCH_DISTANCE);
 		if (existing == null)
 		{
@@ -425,7 +425,7 @@ final class PatchTimerManager
 		Crop crop = CropCatalog.findInText(composition.getName(), patchType);
 		if (crop == null)
 		{
-			PatchTimer existing = findNearbyTimer(anchor, patchType, COMPLETION_DISTANCE);
+			PatchTimer existing = findSamePatch(anchor, patchType, COMPLETION_DISTANCE);
 			if (existing != null)
 			{
 				crop = existing.getCrop();
@@ -455,7 +455,7 @@ final class PatchTimerManager
 		{
 			return;
 		}
-		PatchTimer timer = findNearbyTimer(clicked, patchType, COMPLETION_DISTANCE);
+		PatchTimer timer = findSamePatch(clicked, patchType, COMPLETION_DISTANCE);
 		if (timer != null)
 		{
 			timers.remove(timer.key());
@@ -490,7 +490,7 @@ final class PatchTimerManager
 		}
 		WorldPoint clicked = WorldPoint.fromScene(client, event.getParam0(), event.getParam1(), client.getPlane());
 		WorldPoint anchor = plugin.getPatchAnchor(patchType, clicked);
-		PatchTimer existing = findNearbyTimer(anchor, patchType, SAME_PATCH_DISTANCE);
+		PatchTimer existing = findSamePatch(anchor, patchType, SAME_PATCH_DISTANCE);
 		String key = existing == null ? timerKey(anchor, patchType) : existing.key();
 		PendingCareAction action = pendingCareActions.computeIfAbsent(key,
 			ignored -> new PendingCareAction());
@@ -571,7 +571,7 @@ final class PatchTimerManager
 		}
 		WorldPoint clicked = WorldPoint.fromScene(client, event.getParam0(), event.getParam1(), client.getPlane());
 		WorldPoint anchor = plugin.getPatchAnchor(patchType, clicked);
-		PatchTimer existing = findNearbyTimer(anchor, patchType, COMPLETION_DISTANCE);
+		PatchTimer existing = findSamePatch(anchor, patchType, COMPLETION_DISTANCE);
 		Crop crop = existing == null ? CropCatalog.findInText(name, patchType) : existing.getCrop();
 		if (crop == null)
 		{
@@ -597,7 +597,7 @@ final class PatchTimerManager
 		PatchTimer existing = timers.get(key);
 		if (existing == null)
 		{
-			existing = findNearbyTimer(inspection.location, inspection.patchType, SAME_PATCH_DISTANCE);
+			existing = findSamePatch(inspection.location, inspection.patchType, SAME_PATCH_DISTANCE);
 		}
 		if (existing != null && (existing.isDead() || existing.isDiseased()))
 		{
@@ -643,7 +643,7 @@ final class PatchTimerManager
 
 	private void applyUnhealthyInspection(boolean dead)
 	{
-		PatchTimer existing = findNearbyTimer(inspection.location, inspection.patchType, SAME_PATCH_DISTANCE);
+		PatchTimer existing = findSamePatch(inspection.location, inspection.patchType, SAME_PATCH_DISTANCE);
 		Crop crop = inspection.crop != null ? inspection.crop : existing == null ? null : existing.getCrop();
 		if (crop == null)
 		{
@@ -783,6 +783,69 @@ final class PatchTimerManager
 	private static String timerKey(WorldPoint location, PatchType patchType)
 	{
 		return location.getX() + ":" + location.getY() + ":" + location.getPlane() + ":" + patchType.name();
+	}
+
+	private void loadTimer(PatchTimer timer)
+	{
+		PatchTimer existing = findSamePatch(timer.getPatchLocation(), timer.getPatchType(), SAME_PATCH_DISTANCE);
+		if (existing != null)
+		{
+			if (existing.getPlantedAt().isAfter(timer.getPlantedAt()))
+			{
+				return;
+			}
+			timers.remove(existing.key());
+		}
+		timers.put(timer.key(), timer);
+	}
+
+	private PatchTimer findSamePatch(WorldPoint location, PatchType patchType, int maximumDistance)
+	{
+		PatchTimer nearby = findNearbyTimer(location, patchType, maximumDistance);
+		if (nearby != null || !hasSinglePatchPerLocation(patchType))
+		{
+			return nearby;
+		}
+
+		String locationName = PatchLocationCatalog.name(location);
+		if (locationName.startsWith("Region "))
+		{
+			return null;
+		}
+		for (PatchTimer timer : timers.values())
+		{
+			if (timer.getPatchType() == patchType
+				&& PatchLocationCatalog.name(timer.getPatchLocation()).equals(locationName))
+			{
+				return timer;
+			}
+		}
+		return null;
+	}
+
+	static boolean hasSinglePatchPerLocation(PatchType patchType)
+	{
+		switch (patchType)
+		{
+			case FLOWER:
+			case HERB:
+			case HOPS:
+			case BUSH:
+			case TREE:
+			case FRUIT_TREE:
+			case CACTUS:
+			case MUSHROOM:
+			case BELLADONNA:
+			case CALQUAT:
+			case SPIRIT_TREE:
+			case CELASTRUS:
+			case REDWOOD:
+			case HESPORI:
+			case CRYSTAL_TREE:
+				return true;
+			default:
+				return false;
+		}
 	}
 
 	private PatchTimer findNearbyTimer(WorldPoint location, PatchType patchType, int maximumDistance)

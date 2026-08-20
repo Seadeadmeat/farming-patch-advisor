@@ -18,16 +18,14 @@ final class FarmingItemOverlay extends WidgetItemOverlay
 	private final FarmingPatchAdvisorConfig config;
 	private final ItemManager itemManager;
 	private final FarmingLoadout farmingLoadout;
-	private final FarmingContractManager contractManager;
 
 	@Inject
 	private FarmingItemOverlay(FarmingPatchAdvisorConfig config, ItemManager itemManager,
-		FarmingLoadout farmingLoadout, FarmingContractManager contractManager)
+		FarmingLoadout farmingLoadout)
 	{
 		this.config = config;
 		this.itemManager = itemManager;
 		this.farmingLoadout = farmingLoadout;
-		this.contractManager = contractManager;
 		showOnBank();
 		showOnInventory();
 		showOnInterfaces(InterfaceID.SEED_VAULT);
@@ -68,7 +66,7 @@ final class FarmingItemOverlay extends WidgetItemOverlay
 		{
 			return true;
 		}
-		if (itemId == ItemID.RAKE || itemId == ItemID.DIBBER || itemId == ItemID.SPADE)
+		if (config.checklistTools() && farmingLoadout.isRequiredToolItem(itemId))
 		{
 			return true;
 		}
@@ -89,17 +87,6 @@ final class FarmingItemOverlay extends WidgetItemOverlay
 		if (farmingLoadout.protectionPaymentItemIds(ChecklistPatch.selected(config)).contains(itemId))
 		{
 			return true;
-		}
-		FarmingContract contract = config.showFarmingContract() ? contractManager.getContract() : null;
-		if (contract != null)
-		{
-			for (ProtectionPayment payment : ProtectionPaymentCatalog.forCrop(contract.getCrop()))
-			{
-				if (payment.getItemId() == itemId)
-				{
-					return true;
-				}
-			}
 		}
 		return false;
 	}

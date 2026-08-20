@@ -60,9 +60,34 @@ final class BankFarmRunOverlay extends OverlayPanel
 			return null;
 		}
 
-		List<FarmingLoadout.ChecklistItem> checklist = farmingLoadout.checklist(
+		List<FarmingLoadout.ChecklistItem> runChecklist = farmingLoadout.checklist(
 			config.includeCompost(), config.checklistTools(), config.checklistPayments(),
 			ChecklistPatch.selected(config));
+		List<FarmingLoadout.ChecklistItem> contractChecklist = farmingLoadout.contractChecklist(
+			config.checklistPayments());
+		List<FarmingLoadout.ChecklistItem> runIncomplete = incomplete(runChecklist);
+		List<FarmingLoadout.ChecklistItem> contractIncomplete = incomplete(contractChecklist);
+
+		// Always reserve room for every contract item before truncating the normal farm-run list.
+		int contractDisplayed = Math.min(MAX_ITEMS, contractIncomplete.size());
+		int runDisplayed = Math.min(runIncomplete.size(), MAX_ITEMS - contractDisplayed);
+		int renderedRows = sectionRows(runIncomplete, runDisplayed)
+			+ (contractChecklist.isEmpty() ? 0 : sectionRows(contractIncomplete, contractDisplayed));
+		positionNextTo(storage.getBounds(), renderedRows);
+		panelComponent.getChildren().add(TitleComponent.builder()
+			.text(seedVaultOpen ? "Farm Run Seed List" : "Farm Run Bank List").build());
+		renderSection("Farm Run Items", runIncomplete, runDisplayed, "[x] Farm run ready");
+		if (!contractChecklist.isEmpty())
+		{
+			renderSection("Farming Contract", contractIncomplete, contractDisplayed,
+				"[x] Contract items ready");
+		}
+		return super.render(graphics);
+	}
+
+	private static List<FarmingLoadout.ChecklistItem> incomplete(
+		List<FarmingLoadout.ChecklistItem> checklist)
+	{
 		List<FarmingLoadout.ChecklistItem> incomplete = new ArrayList<>();
 		for (FarmingLoadout.ChecklistItem item : checklist)
 		{
@@ -71,28 +96,32 @@ final class BankFarmRunOverlay extends OverlayPanel
 				incomplete.add(item);
 			}
 		}
+		return incomplete;
+	}
 
-		int displayed = Math.min(MAX_ITEMS, incomplete.size());
-		int renderedRows = incomplete.isEmpty() ? 1 : 1 + displayed + (incomplete.size() > displayed ? 1 : 0);
-		positionNextTo(storage.getBounds(), renderedRows);
-		panelComponent.getChildren().add(TitleComponent.builder()
-			.text(seedVaultOpen ? "Farm Run Seed List" : "Farm Run Bank List").build());
-		if (incomplete.isEmpty())
+	private static int sectionRows(List<FarmingLoadout.ChecklistItem> items, int displayed)
+	{
+		return 1 + (items.isEmpty() ? 1 : displayed + (items.size() > displayed ? 1 : 0));
+	}
+
+	private void renderSection(String title, List<FarmingLoadout.ChecklistItem> items,
+		int displayed, String readyText)
+	{
+		panelComponent.getChildren().add(LineComponent.builder()
+			.left(title)
+			.leftColor(new Color(255, 152, 31))
+			.build());
+		if (items.isEmpty())
 		{
 			panelComponent.getChildren().add(LineComponent.builder()
-				.left("[x] Ready to leave")
+				.left(readyText)
 				.leftColor(Color.GREEN)
 				.build());
-			return super.render(graphics);
+			return;
 		}
-
-		panelComponent.getChildren().add(LineComponent.builder()
-			.left(incomplete.size() + " item" + (incomplete.size() == 1 ? "" : "s") + " remaining")
-			.leftColor(Color.LIGHT_GRAY)
-			.build());
 		for (int i = 0; i < displayed; i++)
 		{
-			FarmingLoadout.ChecklistItem item = incomplete.get(i);
+			FarmingLoadout.ChecklistItem item = items.get(i);
 			panelComponent.getChildren().add(LineComponent.builder()
 				.left("[ ] " + item.getName())
 				.right(item.getOwned() + "/" + item.getNeeded())
@@ -100,14 +129,13 @@ final class BankFarmRunOverlay extends OverlayPanel
 				.rightColor(Color.RED)
 				.build());
 		}
-		if (incomplete.size() > displayed)
+		if (items.size() > displayed)
 		{
 			panelComponent.getChildren().add(LineComponent.builder()
-				.left("+ " + (incomplete.size() - displayed) + " more (use Farm Run filter)")
+				.left("+ " + (items.size() - displayed) + " more (use Farm Run filter)")
 				.leftColor(Color.GRAY)
 				.build());
 		}
-		return super.render(graphics);
 	}
 
 	private Widget visibleWidget(int componentId)

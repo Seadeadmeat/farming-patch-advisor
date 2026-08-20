@@ -11,6 +11,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 import javax.inject.Inject;
@@ -19,10 +20,13 @@ import javax.swing.AbstractButton;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.DefaultListCellRenderer;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JMenuItem;
 import javax.swing.JPopupMenu;
+import javax.swing.JScrollPane;
 import javax.swing.Timer;
 import javax.swing.JToggleButton;
 import net.runelite.client.config.ConfigManager;
@@ -37,21 +41,29 @@ final class FarmingPatchPanel extends PluginPanel
 	private final ConfigManager configManager;
 	private final FarmingContractManager contractManager;
 	private final FarmingLoadout farmingLoadout;
+	private final FarmRunFilterState runFilterState;
+	private final JComboBox<FarmRunFilter> runFilter = new JComboBox<>(FarmRunFilter.values());
 	private final JToggleButton checklistToggle = new JToggleButton();
 	private final JPanel patches = new JPanel();
+	private final JScrollPane patchScrollPane;
 	private final Timer refreshTimer;
+	private boolean updatingRunFilter;
 
 	@Inject
 	private FarmingPatchPanel(PatchTimerManager timerManager, FarmingPatchAdvisorConfig config,
-		ConfigManager configManager, FarmingContractManager contractManager, FarmingLoadout farmingLoadout)
+		ConfigManager configManager, FarmingContractManager contractManager, FarmingLoadout farmingLoadout,
+		FarmRunFilterState runFilterState)
 	{
+		super(false);
 		this.timerManager = timerManager;
 		this.config = config;
 		this.configManager = configManager;
 		this.contractManager = contractManager;
 		this.farmingLoadout = farmingLoadout;
+		this.runFilterState = runFilterState;
 		setLayout(new BorderLayout());
 		setBackground(ColorScheme.DARK_GRAY_COLOR);
+		setBorder(BorderFactory.createLineBorder(ColorScheme.BORDER_COLOR));
 
 		JPanel header = new JPanel();
 		header.setLayout(new BoxLayout(header, BoxLayout.Y_AXIS));
@@ -62,6 +74,9 @@ final class FarmingPatchPanel extends PluginPanel
 		title.setFont(title.getFont().deriveFont(Font.BOLD, 16f));
 		title.setForeground(Color.WHITE);
 		header.add(title);
+		header.add(Box.createRigidArea(new Dimension(0, 8)));
+		styleRunFilter();
+		header.add(runFilter);
 		header.add(Box.createRigidArea(new Dimension(0, 12)));
 		JPanel actions = new JPanel(new GridLayout(1, 2, 8, 0));
 		actions.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -81,7 +96,14 @@ final class FarmingPatchPanel extends PluginPanel
 		patches.setLayout(new BoxLayout(patches, BoxLayout.Y_AXIS));
 		patches.setBackground(ColorScheme.DARK_GRAY_COLOR);
 		patches.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
-		add(patches, BorderLayout.CENTER);
+		patchScrollPane = new JScrollPane(patches);
+		patchScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+		patchScrollPane.setBorder(BorderFactory.createEmptyBorder());
+		patchScrollPane.getViewport().setBackground(ColorScheme.DARK_GRAY_COLOR);
+		patchScrollPane.getVerticalScrollBar().setUI(new NarrowScrollBarUI());
+		patchScrollPane.getVerticalScrollBar().setPreferredSize(new Dimension(NarrowScrollBarUI.WIDTH, 0));
+		patchScrollPane.getVerticalScrollBar().setUnitIncrement(16);
+		add(patchScrollPane, BorderLayout.CENTER);
 
 		refreshTimer = new Timer(1000, event -> rebuild());
 		refreshTimer.start();
@@ -116,8 +138,14 @@ final class FarmingPatchPanel extends PluginPanel
 		unmatchedTimers.removeIf(timer -> !ChecklistPatch.includes(selectedPatches, timer.getPatchType()));
 		int order = 1;
 		List<FarmRunPatch> enabledCatalog = FarmRunCatalog.patches(config);
+		updateRunFilterOptions(enabledCatalog, selectedPatches);
 		for (FarmRunType runType : FarmRunType.values())
 		{
+			FarmRunFilter selectedRunFilter = (FarmRunFilter) runFilter.getSelectedItem();
+			if (selectedRunFilter != null && !selectedRunFilter.includes(runType))
+			{
+				continue;
+			}
 			boolean runSelected = enabledCatalog.stream().anyMatch(patch -> patch.getFarmRunType() == runType
 				&& ChecklistPatch.includes(selectedPatches, patch.getPatchType()));
 			if (!runSelected)
@@ -157,6 +185,81 @@ final class FarmingPatchPanel extends PluginPanel
 		patches.repaint();
 	}
 
+	private void updateRunFilterOptions(List<FarmRunPatch> enabledCatalog,
+		Set<ChecklistPatch> selectedPatches)
+	{
+		Set<FarmRunType> availableRunTypes = EnumSet.noneOf(FarmRunType.class);
+		for (FarmRunPatch patch : enabledCatalog)
+		{
+			if (ChecklistPatch.includes(selectedPatches, patch.getPatchType()))
+			{
+				availableRunTypes.add(patch.getFarmRunType());
+			}
+		}
+
+		FarmRunFilter current = (FarmRunFilter) runFilter.getSelectedItem();
+		List<FarmRunFilter> availableFilters = new ArrayList<>();
+		for (FarmRunFilter filter : FarmRunFilter.values())
+		{
+			if (filter.isAvailable(availableRunTypes))
+			{
+				availableFilters.add(filter);
+			}
+		}
+		boolean unchanged = runFilter.getItemCount() == availableFilters.size();
+		for (int i = 0; unchanged && i < availableFilters.size(); i++)
+		{
+			unchanged = runFilter.getItemAt(i) == availableFilters.get(i);
+		}
+		if (unchanged)
+		{
+			return;
+		}
+
+		updatingRunFilter = true;
+		runFilter.removeAllItems();
+		for (FarmRunFilter filter : availableFilters)
+		{
+			runFilter.addItem(filter);
+		}
+		FarmRunFilter selected = availableFilters.contains(current) ? current : FarmRunFilter.ALL;
+		runFilter.setSelectedItem(selected);
+		runFilterState.setSelected(selected);
+		updatingRunFilter = false;
+	}
+
+	private void styleRunFilter()
+	{
+		runFilter.setAlignmentX(Component.LEFT_ALIGNMENT);
+		runFilter.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
+		runFilter.setBackground(ColorScheme.MEDIUM_GRAY_COLOR);
+		runFilter.setForeground(Color.WHITE);
+		runFilter.setFocusable(false);
+		runFilter.setBorder(BorderFactory.createLineBorder(ColorScheme.BORDER_COLOR));
+		runFilter.setRenderer(new DefaultListCellRenderer()
+		{
+			@Override
+			public Component getListCellRendererComponent(javax.swing.JList<?> list, Object value,
+				int index, boolean isSelected, boolean cellHasFocus)
+			{
+				JLabel label = (JLabel) super.getListCellRendererComponent(list, value, index,
+					isSelected, cellHasFocus);
+				label.setBackground(isSelected ? ColorScheme.DARK_GRAY_COLOR : ColorScheme.MEDIUM_GRAY_COLOR);
+				label.setForeground(Color.WHITE);
+				label.setBorder(BorderFactory.createEmptyBorder(4, 7, 4, 7));
+				return label;
+			}
+		});
+		runFilter.addActionListener(event ->
+		{
+			if (!updatingRunFilter)
+			{
+				runFilterState.setSelected((FarmRunFilter) runFilter.getSelectedItem());
+				rebuild();
+			}
+		});
+	}
+
 	private JPanel createContractCard()
 	{
 		FarmingContract contract = contractManager.getContract();
@@ -179,8 +282,8 @@ final class FarmingPatchPanel extends PluginPanel
 		addLine(card, "Crop: " + contract.getName(), Color.WHITE, true);
 		addLine(card, "Patch: " + crop.getPatchType().getDisplayName() + " - Farming Guild",
 			Color.LIGHT_GRAY, false);
-		addLine(card, "Seed: " + farmingLoadout.inventoryQuantity(crop.getItemId()) + "/"
-			+ crop.getQuantity() + " " + crop.getName(), config.seedColor(), false);
+		addLine(card, "Required: " + farmingLoadout.inventoryQuantity(crop.getItemId()) + "/"
+			+ crop.getQuantity() + " " + crop.getItemName(), config.seedColor(), false);
 		if (payments.isEmpty())
 		{
 			addLine(card, "Payment: None", Color.GRAY, false);
@@ -267,7 +370,7 @@ final class FarmingPatchPanel extends PluginPanel
 		button.setForeground(Color.WHITE);
 		button.setBackground(ColorScheme.MEDIUM_GRAY_COLOR);
 		button.setBorder(BorderFactory.createCompoundBorder(
-			BorderFactory.createLineBorder(ColorScheme.LIGHT_GRAY_COLOR),
+			BorderFactory.createLineBorder(ColorScheme.BORDER_COLOR),
 			BorderFactory.createEmptyBorder(6, 8, 6, 8)));
 	}
 
@@ -369,7 +472,7 @@ final class FarmingPatchPanel extends PluginPanel
 		card.setMaximumSize(new Dimension(Integer.MAX_VALUE, height));
 		card.setBackground(ColorScheme.DARKER_GRAY_COLOR);
 		card.setBorder(BorderFactory.createCompoundBorder(
-			BorderFactory.createLineBorder(ready ? readyColor : ColorScheme.MEDIUM_GRAY_COLOR),
+			BorderFactory.createLineBorder(ready ? readyColor : ColorScheme.BORDER_COLOR),
 			BorderFactory.createEmptyBorder(6, 8, 6, 8)));
 		return card;
 	}
