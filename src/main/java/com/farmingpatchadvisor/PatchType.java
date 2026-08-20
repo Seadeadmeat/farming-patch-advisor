@@ -41,4 +41,14 @@ enum PatchType
 	{
 		return usesDibber;
 	}
+
+	boolean canBeWatered()
+	{
+		return this == ALLOTMENT || this == FLOWER || this == HOPS;
+	}
+
+	boolean usesCompost()
+	{
+		return this != CRYSTAL_TREE;
+	}
 }

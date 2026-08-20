@@ -32,7 +32,7 @@ final class PatchLocationCatalog
 				return index(location, "Falador", "Morytania", "Catherby", "Ardougne", "Kourend",
 					"Troll Stronghold", "Harmony Island", "Weiss", "Farming Guild", "Civitas illa Fortis");
 			case TREE:
-				return 1000 + index(location, "Lumbridge", "Varrock", "Falador", "Taverley", "Gnome Stronghold",
+				return 1000 + index(location, "Lumbridge", "Varrock", "Gnome Stronghold", "Falador", "Taverley",
 					"Farming Guild", "Auburnvale");
 			case FRUIT_TREE:
 			case CALQUAT:

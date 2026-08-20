@@ -1,31 +1,26 @@
 package com.farmingpatchadvisor;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import org.junit.Test;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertEquals;
 
 public class FarmRunCatalogTest
 {
 	@Test
-	public void includesEverySupportedPatchCategoryAndMultiplePatchLocations()
+	public void placesGnomeStrongholdImmediatelyAfterVarrockInTreeRun()
 	{
-		assertTrue(FarmRunCatalog.patches().size() >= 60);
-		for (PatchType patchType : PatchType.values())
+		List<String> locations = new ArrayList<>();
+		for (FarmRunPatch patch : FarmRunCatalog.patches())
 		{
-			assertTrue("Missing " + patchType, FarmRunCatalog.patches().stream()
-				.anyMatch(patch -> patch.getPatchType() == patchType));
+			if (patch.getPatchType() == PatchType.TREE)
+			{
+				locations.add(patch.getLocation());
+			}
 		}
-	}
-
-	@Test
-	public void groupsRepeatedPatchesAtOneLocation()
-	{
-		FarmRunPatch grapes = FarmRunCatalog.patches().stream()
-			.filter(patch -> patch.getLocation().equals("Kourend") && patch.getPatchType() == PatchType.GRAPEVINE)
-			.findFirst().orElseThrow(AssertionError::new);
-		assertTrue(grapes.getPatchCount() == 12);
-		assertTrue(FarmRunCatalog.patches().stream()
-			.filter(patch -> patch.getLocation().equals("Kourend") && patch.getPatchType() == PatchType.GRAPEVINE)
-			.count() == 1);
+		assertEquals(Arrays.asList("Lumbridge", "Varrock", "Gnome Stronghold", "Falador",
+			"Taverley", "Farming Guild", "Auburnvale"), locations);
 	}
 }

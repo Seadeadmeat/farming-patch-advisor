@@ -21,6 +21,7 @@ import net.runelite.api.Skill;
 import net.runelite.api.events.GameObjectDespawned;
 import net.runelite.api.events.GameObjectSpawned;
 import net.runelite.api.events.GameStateChanged;
+import net.runelite.api.events.GameTick;
 import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.MenuOptionClicked;
 import net.runelite.api.events.ItemContainerChanged;
@@ -32,6 +33,8 @@ import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
+import net.runelite.client.events.ProfileChanged;
+import net.runelite.client.events.RuneScapeProfileChanged;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.overlay.OverlayManager;
@@ -85,6 +88,9 @@ public class FarmingPatchAdvisorPlugin extends Plugin
 	@Inject
 	private FarmingPatchAdvisorConfig config;
 
+	@Inject
+	private FarmingContractManager contractManager;
+
 	private NavigationButton navigationButton;
 
 	private final Set<GameObject> patchObjects = new HashSet<>();
@@ -92,6 +98,7 @@ public class FarmingPatchAdvisorPlugin extends Plugin
 	@Override
 	protected void startUp()
 	{
+		contractManager.load();
 		timerManager.load();
 		overlayManager.add(patchOverlay);
 		overlayManager.add(itemOverlay);
@@ -137,6 +144,7 @@ public class FarmingPatchAdvisorPlugin extends Plugin
 		{
 			patchObjects.add(object);
 		}
+		timerManager.onPatchObjectSpawned(object);
 	}
 
 	@Subscribe
@@ -148,12 +156,19 @@ public class FarmingPatchAdvisorPlugin extends Plugin
 	@Subscribe
 	public void onGameStateChanged(GameStateChanged event)
 	{
+		if (event.getGameState() == GameState.LOGGED_IN)
+		{
+			contractManager.load();
+			timerManager.load();
+		}
 		if (event.getGameState() == GameState.LOADING || event.getGameState() == GameState.LOGIN_SCREEN)
 		{
 			patchObjects.clear();
 			if (event.getGameState() == GameState.LOGIN_SCREEN)
 			{
 				farmingLoadout.clearStorageSnapshots();
+				timerManager.unload();
+				contractManager.unload();
 			}
 		}
 	}
@@ -168,6 +183,37 @@ public class FarmingPatchAdvisorPlugin extends Plugin
 	public void onChatMessage(ChatMessage event)
 	{
 		timerManager.onChatMessage(event);
+		contractManager.checkGameMessage(event.getMessage());
+	}
+
+	@Subscribe
+	public void onGameTick(GameTick event)
+	{
+		contractManager.checkJaneDialogue();
+		for (GameObject object : new HashSet<>(patchObjects))
+		{
+			timerManager.onPatchObjectSpawned(object);
+		}
+	}
+
+	@Subscribe
+	public void onProfileChanged(ProfileChanged event)
+	{
+		reloadCharacterData();
+	}
+
+	@Subscribe
+	public void onRuneScapeProfileChanged(RuneScapeProfileChanged event)
+	{
+		reloadCharacterData();
+	}
+
+	private void reloadCharacterData()
+	{
+		patchObjects.clear();
+		farmingLoadout.clearStorageSnapshots();
+		contractManager.load();
+		timerManager.load();
 	}
 
 	@Subscribe
@@ -231,7 +277,15 @@ public class FarmingPatchAdvisorPlugin extends Plugin
 		{
 			composition = composition.getImpostor();
 		}
-		PatchType patchType = composition == null ? null : PatchClassifier.classify(composition.getName());
+		String name = composition == null ? "" : composition.getName();
+		PatchType patchType = PatchClassifier.classify(name);
+		boolean farmingState = PatchClassifier.hasAction(composition, "Inspect")
+			&& PatchClassifier.hasAction(composition, "Guide");
+		if (patchType == null && farmingState)
+		{
+			PatchTimer timer = timerManager.findTimer(object.getWorldLocation(), 4);
+			patchType = timer == null ? null : timer.getPatchType();
+		}
 		return patchType != null && PatchLocationSelection.isEnabled(config,
 			PatchLocationCatalog.name(object.getWorldLocation())) ? patchType : null;
 	}

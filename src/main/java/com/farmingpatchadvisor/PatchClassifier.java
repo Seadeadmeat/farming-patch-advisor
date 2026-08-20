@@ -1,6 +1,7 @@
 package com.farmingpatchadvisor;
 
 import java.util.Locale;
+import net.runelite.api.ObjectComposition;
 import net.runelite.api.gameval.ObjectID;
 
 final class PatchClassifier
@@ -139,5 +140,21 @@ final class PatchClassifier
 		}
 		Crop crop = CropCatalog.findInAnyText(name);
 		return crop == null ? null : crop.getPatchType();
+	}
+
+	static boolean hasAction(ObjectComposition composition, String expected)
+	{
+		if (composition == null || composition.getActions() == null)
+		{
+			return false;
+		}
+		for (String action : composition.getActions())
+		{
+			if (expected.equalsIgnoreCase(action))
+			{
+				return true;
+			}
+		}
+		return false;
 	}
 }

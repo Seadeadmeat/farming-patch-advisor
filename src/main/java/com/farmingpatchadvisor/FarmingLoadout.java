@@ -23,6 +23,7 @@ final class FarmingLoadout
 {
 	private final FarmingPatchAdvisorPlugin plugin;
 	private final FarmingPatchAdvisorConfig config;
+	private final FarmingContractManager contractManager;
 	private final Provider<PatchTimerManager> timerManagerProvider;
 	private final Map<Integer, Integer> bankItems = new HashMap<>();
 	private final Map<Integer, Integer> inventoryItems = new HashMap<>();
@@ -35,10 +36,11 @@ final class FarmingLoadout
 
 	@Inject
 	private FarmingLoadout(FarmingPatchAdvisorPlugin plugin, FarmingPatchAdvisorConfig config,
-		Provider<PatchTimerManager> timerManagerProvider)
+		FarmingContractManager contractManager, Provider<PatchTimerManager> timerManagerProvider)
 	{
 		this.plugin = plugin;
 		this.config = config;
+		this.contractManager = contractManager;
 		this.timerManagerProvider = timerManagerProvider;
 	}
 
@@ -75,6 +77,7 @@ final class FarmingLoadout
 				selected.put(crop.getItemId(), crop);
 			}
 		}
+		addContractSeed(selected);
 		return selected;
 	}
 
@@ -100,6 +103,7 @@ final class FarmingLoadout
 				selected.put(crop.getItemId(), crop);
 			}
 		}
+		addContractSeed(selected);
 		return selected;
 	}
 
@@ -227,8 +231,43 @@ final class FarmingLoadout
 				}
 			}
 		}
+		addContractItemIds(itemIds, includePayments);
 		addRequiredItemIds(itemIds, includeCompost, includeTools);
+		for (int remedyItemId : remedyItemIds())
+		{
+			if (inventoryCountIncludingVariations(remedyItemId) == 0)
+			{
+				itemIds.add(remedyItemId);
+			}
+		}
 		return itemIds;
+	}
+
+	synchronized Set<Integer> remedyItemIds()
+	{
+		Set<Integer> itemIds = new HashSet<>();
+		PatchTimerManager timerManager = timerManagerProvider.get();
+		if (timerManager.hasDiseasedPatch(false))
+		{
+			itemIds.add(ItemID.PLANT_CURE);
+		}
+		if (timerManager.hasDiseasedPatch(true))
+		{
+			itemIds.add(ItemID.SECATEURS);
+		}
+		return itemIds;
+	}
+
+	synchronized boolean isRemedyItem(int itemId)
+	{
+		PatchTimerManager timerManager = timerManagerProvider.get();
+		return (itemId == ItemID.PLANT_CURE && timerManager.hasDiseasedPatch(false))
+			|| (itemId == ItemID.SECATEURS && timerManager.hasDiseasedPatch(true));
+	}
+
+	synchronized int inventoryQuantity(int itemId)
+	{
+		return inventoryCountIncludingVariations(itemId);
 	}
 
 	synchronized Set<Integer> protectionPaymentItemIds(Set<ChecklistPatch> includedPatches)
@@ -313,6 +352,10 @@ final class FarmingLoadout
 		RunProgress progress = new RunProgress();
 		for (PatchTimer timer : timerManagerProvider.get().getTimers())
 		{
+			if (timer.isDead())
+			{
+				continue;
+			}
 			progress.occupiedPatches.merge(timer.getPatchType(), 1, Integer::sum);
 			Crop activeCrop = progress.activeCrops.get(timer.getPatchType());
 			if (activeCrop == null || timer.getCrop().getLevel() > activeCrop.getLevel())
@@ -444,6 +487,32 @@ final class FarmingLoadout
 			else
 			{
 				itemIds.add(ItemID.BUCKET_ULTRACOMPOST);
+			}
+		}
+	}
+
+	private void addContractSeed(Map<Integer, Crop> selected)
+	{
+		FarmingContract contract = config.showFarmingContract() ? contractManager.getContract() : null;
+		if (contract != null)
+		{
+			selected.put(contract.getCrop().getItemId(), contract.getCrop());
+		}
+	}
+
+	private void addContractItemIds(Set<Integer> itemIds, boolean includePayments)
+	{
+		FarmingContract contract = config.showFarmingContract() ? contractManager.getContract() : null;
+		if (contract == null)
+		{
+			return;
+		}
+		itemIds.add(contract.getCrop().getItemId());
+		if (includePayments)
+		{
+			for (ProtectionPayment payment : ProtectionPaymentCatalog.forCrop(contract.getCrop()))
+			{
+				itemIds.add(payment.getItemId());
 			}
 		}
 	}

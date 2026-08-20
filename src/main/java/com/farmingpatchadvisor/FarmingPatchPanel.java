@@ -35,17 +35,21 @@ final class FarmingPatchPanel extends PluginPanel
 	private final PatchTimerManager timerManager;
 	private final FarmingPatchAdvisorConfig config;
 	private final ConfigManager configManager;
+	private final FarmingContractManager contractManager;
+	private final FarmingLoadout farmingLoadout;
 	private final JToggleButton checklistToggle = new JToggleButton();
 	private final JPanel patches = new JPanel();
 	private final Timer refreshTimer;
 
 	@Inject
 	private FarmingPatchPanel(PatchTimerManager timerManager, FarmingPatchAdvisorConfig config,
-		ConfigManager configManager)
+		ConfigManager configManager, FarmingContractManager contractManager, FarmingLoadout farmingLoadout)
 	{
 		this.timerManager = timerManager;
 		this.config = config;
 		this.configManager = configManager;
+		this.contractManager = contractManager;
+		this.farmingLoadout = farmingLoadout;
 		setLayout(new BorderLayout());
 		setBackground(ColorScheme.DARK_GRAY_COLOR);
 
@@ -102,6 +106,11 @@ final class FarmingPatchPanel extends PluginPanel
 	{
 		updateChecklistButton();
 		patches.removeAll();
+		if (config.showFarmingContract())
+		{
+			patches.add(createContractCard());
+			patches.add(Box.createRigidArea(new Dimension(0, 10)));
+		}
 		Set<ChecklistPatch> selectedPatches = ChecklistPatch.selected(config);
 		List<PatchTimer> unmatchedTimers = new ArrayList<>(timerManager.getTimers());
 		unmatchedTimers.removeIf(timer -> !ChecklistPatch.includes(selectedPatches, timer.getPatchType()));
@@ -146,6 +155,78 @@ final class FarmingPatchPanel extends PluginPanel
 		}
 		patches.revalidate();
 		patches.repaint();
+	}
+
+	private JPanel createContractCard()
+	{
+		FarmingContract contract = contractManager.getContract();
+		if (contract == null)
+		{
+			JPanel card = createCard(66, false, ColorScheme.MEDIUM_GRAY_COLOR);
+			addLine(card, "Farming Contract", new Color(255, 152, 31), true);
+			addLine(card, "Contract unknown", Color.LIGHT_GRAY, true);
+			addLine(card, "Talk to Guildmaster Jane", Color.GRAY, false);
+			return card;
+		}
+
+		Crop crop = contract.getCrop();
+		List<ProtectionPayment> payments = ProtectionPaymentCatalog.forCrop(crop);
+		PatchTimer timer = findContractTimer(crop);
+		int lineCount = 5 + Math.max(1, payments.size())
+			+ (timer != null && (timer.isDead() || timer.isDiseased()) ? 1 : 0);
+		JPanel card = createCard(20 + lineCount * 17, false, ColorScheme.MEDIUM_GRAY_COLOR);
+		addLine(card, "Farming Contract", new Color(255, 152, 31), true);
+		addLine(card, "Crop: " + contract.getName(), Color.WHITE, true);
+		addLine(card, "Patch: " + crop.getPatchType().getDisplayName() + " - Farming Guild",
+			Color.LIGHT_GRAY, false);
+		addLine(card, "Seed: " + farmingLoadout.inventoryQuantity(crop.getItemId()) + "/"
+			+ crop.getQuantity() + " " + crop.getName(), config.seedColor(), false);
+		if (payments.isEmpty())
+		{
+			addLine(card, "Payment: None", Color.GRAY, false);
+		}
+		else
+		{
+			for (ProtectionPayment payment : payments)
+			{
+				addLine(card, "Payment: " + farmingLoadout.inventoryQuantity(payment.getItemId()) + "/"
+					+ payment.getQuantity() + " " + payment.getName(), config.requiredItemColor(), false);
+			}
+		}
+		if (timer == null)
+		{
+			addLine(card, "Status: Not tracked", Color.GRAY, false);
+		}
+		else
+		{
+			Instant now = Instant.now();
+			boolean ready = !timer.isDead() && !timer.isDiseased()
+				&& !now.isBefore(timer.getReadyAt());
+			addLine(card, "Status: " + (timer.isDead() ? "DEAD" : timer.isDiseased() ? "DISEASED"
+				: ready ? "READY"
+				: PatchTimerOverlay.formatRemaining(Duration.between(now, timer.getReadyAt()))),
+				timer.isDead() ? Color.RED : timer.isDiseased() ? Color.YELLOW
+					: ready ? Color.RED : Color.GREEN, true);
+			String remedy = PatchRemedy.forTimer(timer);
+			if (remedy != null)
+			{
+				addLine(card, "Remedy: " + remedy, Color.LIGHT_GRAY, false);
+			}
+		}
+		return card;
+	}
+
+	private PatchTimer findContractTimer(Crop crop)
+	{
+		for (PatchTimer timer : timerManager.getTimers())
+		{
+			if (timer.getPatchType() == crop.getPatchType() && timer.getCrop().equals(crop)
+				&& "Farming Guild".equals(PatchLocationCatalog.name(timer.getPatchLocation())))
+			{
+				return timer;
+			}
+		}
+		return null;
 	}
 
 	private static JPanel createRunHeader(FarmRunType runType)
@@ -217,12 +298,14 @@ final class FarmingPatchPanel extends PluginPanel
 	private JPanel createTrackedCard(int order, FarmRunPatch patch, List<PatchTimer> matchingTimers)
 	{
 		Instant now = Instant.now();
-		boolean ready = matchingTimers.stream().anyMatch(timer -> !now.isBefore(timer.getReadyAt()));
+		boolean ready = matchingTimers.stream().anyMatch(timer -> timer.isDead() || timer.isDiseased()
+			|| !now.isBefore(timer.getReadyAt()));
 		Color readyColor = (System.currentTimeMillis() / 500L) % 2 == 0 ? Color.RED : new Color(140, 0, 0);
 		int height = 48 + matchingTimers.size() * 57;
 		for (PatchTimer timer : matchingTimers)
 		{
-			if (!timer.isPlantedTimer())
+			if ((!timer.isPlantedTimer() && !timer.isDead() && !timer.isDiseased())
+				|| timer.isDead() || timer.isDiseased())
 			{
 				height += 18;
 			}
@@ -238,13 +321,23 @@ final class FarmingPatchPanel extends PluginPanel
 			String prefix = matchingTimers.size() > 1 ? timerNumber++ + ". " : "";
 			addLine(card, prefix + "Planted: " + timer.getCrop().getName() + " x" + timer.getCrop().getQuantity(), Color.LIGHT_GRAY, false);
 			addLine(card, (timer.isPlantedTimer() ? "Started: " : "Inspected: ") + CLOCK.format(timer.getPlantedAt()), Color.LIGHT_GRAY, false);
-			if (!timer.isPlantedTimer())
+			if (!timer.isPlantedTimer() && !timer.isDead() && !timer.isDiseased())
 			{
 				addLine(card, "Stage: " + timer.getEstimatedStage(now) + "/" + timer.getTotalStages() + " (maximum estimate)", Color.LIGHT_GRAY, false);
 			}
-			boolean timerReady = !now.isBefore(timer.getReadyAt());
-			String remaining = timerReady ? "READY" : PatchTimerOverlay.formatRemaining(Duration.between(now, timer.getReadyAt()));
-			addLine(card, "Time remaining: " + remaining, timerReady ? readyColor : Color.GREEN, true);
+			boolean timerReady = !timer.isDead() && !timer.isDiseased()
+				&& !now.isBefore(timer.getReadyAt());
+			String remaining = timer.isDead() ? "DEAD" : timer.isDiseased() ? "DISEASED"
+				: timerReady ? "READY"
+				: PatchTimerOverlay.formatRemaining(Duration.between(now, timer.getReadyAt()));
+			addLine(card, "Time remaining: " + remaining,
+				timer.isDead() ? Color.RED : timer.isDiseased() ? Color.YELLOW
+					: timerReady ? readyColor : Color.GREEN, true);
+			String remedy = PatchRemedy.forTimer(timer);
+			if (remedy != null)
+			{
+				addLine(card, "Remedy: " + remedy, Color.LIGHT_GRAY, false);
+			}
 		}
 		addResetMenu(card, patch);
 		return card;

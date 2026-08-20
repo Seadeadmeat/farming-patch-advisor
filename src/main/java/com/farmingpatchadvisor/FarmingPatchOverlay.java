@@ -27,14 +27,19 @@ final class FarmingPatchOverlay extends Overlay
 	private final FarmingPatchAdvisorPlugin plugin;
 	private final FarmingPatchAdvisorConfig config;
 	private final FarmingLoadout farmingLoadout;
+	private final FarmingContractManager contractManager;
+	private final PatchTimerManager timerManager;
 
 	@Inject
 	private FarmingPatchOverlay(FarmingPatchAdvisorPlugin plugin, FarmingPatchAdvisorConfig config,
-		FarmingLoadout farmingLoadout)
+		FarmingLoadout farmingLoadout, FarmingContractManager contractManager,
+		PatchTimerManager timerManager)
 	{
 		this.plugin = plugin;
 		this.config = config;
 		this.farmingLoadout = farmingLoadout;
+		this.contractManager = contractManager;
+		this.timerManager = timerManager;
 		setPosition(OverlayPosition.DYNAMIC);
 		setLayer(OverlayLayer.ABOVE_SCENE);
 		setPriority(PRIORITY_LOW);
@@ -57,7 +62,7 @@ final class FarmingPatchOverlay extends Overlay
 			}
 
 			PatchType patchType = plugin.getPatchType(object);
-			Crop crop = patchType == null ? null : farmingLoadout.recommendedCrop(patchType);
+			Crop crop = contractCrop(object, patchType);
 			if (crop == null)
 			{
 				continue;
@@ -82,19 +87,64 @@ final class FarmingPatchOverlay extends Overlay
 
 			if (!patchArea.isEmpty())
 			{
-				Color color = config.seedColor();
+				PatchTimer timer = timerManager.findTimer(first.object.getWorldLocation(),
+					first.patchType, 4);
+				Color color = timer != null && timer.isDead() ? Color.RED
+					: timer != null && timer.isDiseased() ? Color.YELLOW : config.seedColor();
 				OverlayUtil.renderPolygon(graphics, patchArea, color,
 					new Color(color.getRed(), color.getGreen(), color.getBlue(), 25), new BasicStroke(2));
 
 				String text = first.crop.getName() + " x" + first.crop.getQuantity()
 					+ " (Lvl " + first.crop.getLevel() + ")";
 				Rectangle bounds = patchArea.getBounds();
-				int textX = bounds.x + (bounds.width - graphics.getFontMetrics().stringWidth(text)) / 2;
-				int textY = bounds.y + bounds.height / 2;
-				OverlayUtil.renderTextLocation(graphics, new Point(textX, textY), text, color);
+				List<String> lines = new ArrayList<>();
+				lines.add(text);
+				boolean growing = timer != null && !timer.isDead() && !timer.isDiseased()
+					&& java.time.Instant.now().isBefore(timer.getReadyAt());
+				if (growing && (timer.needsCompost() || timer.needsWater()))
+				{
+					StringBuilder needs = new StringBuilder("Needs: ");
+					if (timer.needsCompost())
+					{
+						needs.append("Compost");
+					}
+					if (timer.needsWater())
+					{
+						if (needs.length() > 7)
+						{
+							needs.append(" + ");
+						}
+						needs.append("Water");
+					}
+					lines.add(needs.toString());
+				}
+				int lineHeight = graphics.getFontMetrics().getHeight();
+				int textY = bounds.y + bounds.height / 2 - (lines.size() - 1) * lineHeight / 2;
+				for (String line : lines)
+				{
+					int textX = bounds.x + (bounds.width - graphics.getFontMetrics().stringWidth(line)) / 2;
+					OverlayUtil.renderTextLocation(graphics, new Point(textX, textY), line, color);
+					textY += lineHeight;
+				}
 			}
 		}
 		return null;
+	}
+
+	private Crop contractCrop(GameObject object, PatchType patchType)
+	{
+		if (patchType == null)
+		{
+			return null;
+		}
+		FarmingContract contract = config.showFarmingContract() && config.highlightContractPatch()
+			? contractManager.getContract() : null;
+		if (contract != null && contract.getCrop().getPatchType() == patchType
+			&& "Farming Guild".equals(PatchLocationCatalog.name(object.getWorldLocation())))
+		{
+			return contract.getCrop();
+		}
+		return farmingLoadout.recommendedCrop(patchType);
 	}
 
 	private static List<PatchObject> collectConnectedPatch(PatchObject first, List<PatchObject> remaining)

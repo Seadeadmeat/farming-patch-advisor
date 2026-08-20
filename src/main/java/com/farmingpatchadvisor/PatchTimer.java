@@ -13,6 +13,10 @@ final class PatchTimer
 	private final boolean plantedTimer;
 	private final int observedStage;
 	private final int totalStages;
+	private final boolean dead;
+	private final boolean diseased;
+	private final boolean compostApplied;
+	private final boolean watered;
 
 	PatchTimer(WorldPoint patchLocation, PatchType patchType, Crop crop, Instant plantedAt, Instant readyAt)
 	{
@@ -22,6 +26,27 @@ final class PatchTimer
 	PatchTimer(WorldPoint patchLocation, PatchType patchType, Crop crop, Instant plantedAt, Instant readyAt,
 		boolean plantedTimer, int observedStage, int totalStages)
 	{
+		this(patchLocation, patchType, crop, plantedAt, readyAt, plantedTimer, observedStage, totalStages, false);
+	}
+
+	PatchTimer(WorldPoint patchLocation, PatchType patchType, Crop crop, Instant plantedAt, Instant readyAt,
+		boolean plantedTimer, int observedStage, int totalStages, boolean dead)
+	{
+		this(patchLocation, patchType, crop, plantedAt, readyAt, plantedTimer,
+			observedStage, totalStages, dead, false);
+	}
+
+	PatchTimer(WorldPoint patchLocation, PatchType patchType, Crop crop, Instant plantedAt, Instant readyAt,
+		boolean plantedTimer, int observedStage, int totalStages, boolean dead, boolean diseased)
+	{
+		this(patchLocation, patchType, crop, plantedAt, readyAt, plantedTimer, observedStage,
+			totalStages, dead, diseased, false, false);
+	}
+
+	PatchTimer(WorldPoint patchLocation, PatchType patchType, Crop crop, Instant plantedAt, Instant readyAt,
+		boolean plantedTimer, int observedStage, int totalStages, boolean dead, boolean diseased,
+		boolean compostApplied, boolean watered)
+	{
 		this.patchLocation = patchLocation;
 		this.patchType = patchType;
 		this.crop = crop;
@@ -30,6 +55,10 @@ final class PatchTimer
 		this.plantedTimer = plantedTimer;
 		this.observedStage = observedStage;
 		this.totalStages = totalStages;
+		this.dead = dead;
+		this.diseased = diseased;
+		this.compostApplied = compostApplied;
+		this.watered = watered;
 	}
 
 	String key()
@@ -75,6 +104,36 @@ final class PatchTimer
 	int getTotalStages()
 	{
 		return totalStages;
+	}
+
+	boolean isDead()
+	{
+		return dead;
+	}
+
+	boolean isDiseased()
+	{
+		return diseased;
+	}
+
+	boolean isCompostApplied()
+	{
+		return compostApplied;
+	}
+
+	boolean isWatered()
+	{
+		return watered;
+	}
+
+	boolean needsCompost()
+	{
+		return patchType.usesCompost() && !compostApplied;
+	}
+
+	boolean needsWater()
+	{
+		return patchType.canBeWatered() && !watered;
 	}
 
 	int getEstimatedStage(Instant now)

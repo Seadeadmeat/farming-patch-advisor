@@ -53,7 +53,7 @@ final class FarmRunCatalog
 		add(patches, "Prifddinas", "", PatchType.FLOWER);
 
 		// Regular tree run.
-		for (String location : new String[]{"Lumbridge", "Varrock", "Falador", "Taverley", "Gnome Stronghold", "Farming Guild", "Auburnvale"})
+		for (String location : new String[]{"Lumbridge", "Varrock", "Gnome Stronghold", "Falador", "Taverley", "Farming Guild", "Auburnvale"})
 		{
 			add(patches, location, "", PatchType.TREE);
 		}
