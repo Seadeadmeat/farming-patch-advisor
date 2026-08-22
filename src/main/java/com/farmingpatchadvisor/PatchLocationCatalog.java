@@ -53,6 +53,7 @@ final class PatchLocationCatalog
 			case CELASTRUS:
 			case REDWOOD:
 			case HESPORI:
+			case ANIMA:
 			case SPIRIT_TREE:
 			case CRYSTAL_TREE:
 			case CORAL:

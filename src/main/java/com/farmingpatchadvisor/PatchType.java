@@ -20,6 +20,7 @@ enum PatchType
 	CELASTRUS("Celastrus", false),
 	REDWOOD("Redwood", false),
 	HESPORI("Hespori", true),
+	ANIMA("Anima", true),
 	CRYSTAL_TREE("Crystal tree", false),
 	CORAL("Coral", true);
 
@@ -49,6 +50,6 @@ enum PatchType
 
 	boolean usesCompost()
 	{
-		return this != CRYSTAL_TREE;
+		return this != GRAPEVINE && this != HESPORI && this != ANIMA;
 	}
 }

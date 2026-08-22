@@ -23,6 +23,7 @@ public enum ChecklistPatch
 	CELASTRUS(PatchType.CELASTRUS),
 	REDWOOD(PatchType.REDWOOD),
 	HESPORI(PatchType.HESPORI),
+	ANIMA(PatchType.ANIMA),
 	CRYSTAL_TREE(PatchType.CRYSTAL_TREE),
 	CORAL(PatchType.CORAL);
 
@@ -85,6 +86,7 @@ public enum ChecklistPatch
 			case CELASTRUS: return config.checklistCelastrus();
 			case REDWOOD: return config.checklistRedwood();
 			case HESPORI: return config.checklistHespori();
+			case ANIMA: return config.checklistAnima();
 			case CRYSTAL_TREE: return config.checklistCrystalTree();
 			case CORAL: return config.checklistCoral();
 			default: return true;

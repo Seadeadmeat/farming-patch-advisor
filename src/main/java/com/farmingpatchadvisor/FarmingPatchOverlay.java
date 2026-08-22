@@ -34,11 +34,12 @@ final class FarmingPatchOverlay extends Overlay
 	private final FarmingLoadout farmingLoadout;
 	private final FarmingContractManager contractManager;
 	private final PatchTimerManager timerManager;
+	private final FarmRunFilterState runFilterState;
 
 	@Inject
 	private FarmingPatchOverlay(Client client, FarmingPatchAdvisorPlugin plugin, FarmingPatchAdvisorConfig config,
 		FarmingLoadout farmingLoadout, FarmingContractManager contractManager,
-		PatchTimerManager timerManager)
+		PatchTimerManager timerManager, FarmRunFilterState runFilterState)
 	{
 		this.client = client;
 		this.plugin = plugin;
@@ -46,6 +47,7 @@ final class FarmingPatchOverlay extends Overlay
 		this.farmingLoadout = farmingLoadout;
 		this.contractManager = contractManager;
 		this.timerManager = timerManager;
+		this.runFilterState = runFilterState;
 		setPosition(OverlayPosition.DYNAMIC);
 		setLayer(OverlayLayer.ABOVE_SCENE);
 		setPriority(PRIORITY_LOW);
@@ -59,6 +61,7 @@ final class FarmingPatchOverlay extends Overlay
 			return null;
 		}
 
+		Set<ChecklistPatch> selectedPatches = ChecklistPatch.selected(config);
 		List<PatchObject> remaining = new ArrayList<>();
 		for (GameObject object : plugin.getPatchObjects())
 		{
@@ -68,6 +71,10 @@ final class FarmingPatchOverlay extends Overlay
 			}
 
 			PatchType patchType = plugin.getPatchType(object);
+			if (!shouldHighlight(patchType, selectedPatches, runFilterState))
+			{
+				continue;
+			}
 			Crop contractCrop = contractCrop(object, patchType);
 			Crop crop = contractCrop != null ? contractCrop
 				: patchType == null ? null : farmingLoadout.recommendedCrop(patchType);
@@ -144,6 +151,14 @@ final class FarmingPatchOverlay extends Overlay
 			}
 		}
 		return null;
+	}
+
+	static boolean shouldHighlight(PatchType patchType, Set<ChecklistPatch> selectedPatches,
+		FarmRunFilterState runFilterState)
+	{
+		return patchType != null
+			&& ChecklistPatch.includes(selectedPatches, patchType)
+			&& runFilterState.includes(patchType);
 	}
 
 	private Crop contractCrop(GameObject object, PatchType patchType)

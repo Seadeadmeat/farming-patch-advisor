@@ -135,6 +135,27 @@ public class PatchTimerTest
 	}
 
 	@Test
+	public void exposesOnlyCareFlagsSupportedByThePatch()
+	{
+		Instant now = Instant.parse("2026-08-19T00:00:00Z");
+		assertCareFlags(PatchType.ALLOTMENT, true, true, now);
+		assertCareFlags(PatchType.HERB, true, false, now);
+		assertCareFlags(PatchType.CRYSTAL_TREE, true, false, now);
+		assertCareFlags(PatchType.GRAPEVINE, false, false, now);
+		assertCareFlags(PatchType.HESPORI, false, false, now);
+		assertCareFlags(PatchType.ANIMA, false, false, now);
+	}
+
+	private static void assertCareFlags(PatchType patchType, boolean compost, boolean water, Instant now)
+	{
+		Crop crop = CropCatalog.recommend(patchType, 99);
+		PatchTimer timer = new PatchTimer(new WorldPoint(0, 0, 0), patchType,
+			crop, now, now.plusSeconds(600));
+		assertEquals(compost, timer.needsCompost());
+		assertEquals(water, timer.needsWater());
+	}
+
+	@Test
 	public void parsesInspectionStagesAndCompletionMessages()
 	{
 		assertEquals(2, PatchTimerManager.parseGrowthStage("Growth stage 2 of 5")[0]);

@@ -124,7 +124,7 @@ final class PatchTimerManager
 		List<PatchTimer> sorted = new ArrayList<>();
 		for (PatchTimer timer : timers.values())
 		{
-			if (PatchLocationSelection.isEnabled(config, PatchLocationCatalog.name(timer.getPatchLocation())))
+			if (isEnabledPatchLocation(timer.getPatchLocation(), timer.getPatchType()))
 			{
 				sorted.add(timer);
 			}
@@ -206,14 +206,15 @@ final class PatchTimerManager
 		{
 			composition = composition.getImpostor();
 		}
-		PatchType patchType = composition == null ? null : PatchClassifier.classify(composition.getName());
+		PatchType patchType = composition == null ? null
+			: PatchClassifier.classify(event.getId(), composition.getName());
 		if (patchType == null || patchType != crop.getPatchType())
 		{
 			return;
 		}
 
 		WorldPoint clicked = WorldPoint.fromScene(client, event.getParam0(), event.getParam1(), client.getPlane());
-		if (!PatchLocationSelection.isEnabled(config, PatchLocationCatalog.name(clicked)))
+		if (!isEnabledPatchLocation(clicked, patchType))
 		{
 			return;
 		}
@@ -314,7 +315,11 @@ final class PatchTimerManager
 		boolean dead = isDeadObjectState(name, actions);
 		boolean diseased = isDiseasedObjectState(name, actions);
 		boolean watered = isWateredObjectName(name);
-		PatchType patchType = PatchClassifier.classifyGrowing(name);
+		PatchType patchType = PatchClassifier.classifyGrowing(object.getId(), name);
+		if (patchType != null && !isKnownPatchLocation(object.getWorldLocation(), patchType))
+		{
+			return;
+		}
 		if (!dead && !diseased && patchType == null)
 		{
 			return;
@@ -411,13 +416,14 @@ final class PatchTimerManager
 		{
 			composition = composition.getImpostor();
 		}
-		PatchType patchType = composition == null ? null : PatchClassifier.classifyGrowing(composition.getName());
+		PatchType patchType = composition == null ? null
+			: PatchClassifier.classifyGrowing(event.getId(), composition.getName());
 		if (patchType == null)
 		{
 			return;
 		}
 		WorldPoint clicked = WorldPoint.fromScene(client, event.getParam0(), event.getParam1(), client.getPlane());
-		if (!PatchLocationSelection.isEnabled(config, PatchLocationCatalog.name(clicked)))
+		if (!isEnabledPatchLocation(clicked, patchType))
 		{
 			return;
 		}
@@ -445,13 +451,14 @@ final class PatchTimerManager
 		{
 			composition = composition.getImpostor();
 		}
-		PatchType patchType = composition == null ? null : PatchClassifier.classifyGrowing(composition.getName());
+		PatchType patchType = composition == null ? null
+			: PatchClassifier.classifyGrowing(event.getId(), composition.getName());
 		if (patchType == null)
 		{
 			return;
 		}
 		WorldPoint clicked = WorldPoint.fromScene(client, event.getParam0(), event.getParam1(), client.getPlane());
-		if (!PatchLocationSelection.isEnabled(config, PatchLocationCatalog.name(clicked)))
+		if (!isEnabledPatchLocation(clicked, patchType))
 		{
 			return;
 		}
@@ -483,12 +490,17 @@ final class PatchTimerManager
 		{
 			composition = composition.getImpostor();
 		}
-		PatchType patchType = composition == null ? null : PatchClassifier.classifyGrowing(composition.getName());
+		PatchType patchType = composition == null ? null
+			: PatchClassifier.classifyGrowing(event.getId(), composition.getName());
 		if (patchType == null || water && !patchType.canBeWatered())
 		{
 			return true;
 		}
 		WorldPoint clicked = WorldPoint.fromScene(client, event.getParam0(), event.getParam1(), client.getPlane());
+		if (!isEnabledPatchLocation(clicked, patchType))
+		{
+			return true;
+		}
 		WorldPoint anchor = plugin.getPatchAnchor(patchType, clicked);
 		PatchTimer existing = findSamePatch(anchor, patchType, SAME_PATCH_DISTANCE);
 		String key = existing == null ? timerKey(anchor, patchType) : existing.key();
@@ -564,12 +576,16 @@ final class PatchTimerManager
 			composition = composition.getImpostor();
 		}
 		String name = composition == null ? "" : composition.getName();
-		PatchType patchType = PatchClassifier.classifyGrowing(name);
+		PatchType patchType = PatchClassifier.classifyGrowing(event.getId(), name);
 		if (patchType == null)
 		{
 			return;
 		}
 		WorldPoint clicked = WorldPoint.fromScene(client, event.getParam0(), event.getParam1(), client.getPlane());
+		if (!isEnabledPatchLocation(clicked, patchType))
+		{
+			return;
+		}
 		WorldPoint anchor = plugin.getPatchAnchor(patchType, clicked);
 		PatchTimer existing = findSamePatch(anchor, patchType, COMPLETION_DISTANCE);
 		Crop crop = existing == null ? CropCatalog.findInText(name, patchType) : existing.getCrop();
@@ -783,6 +799,17 @@ final class PatchTimerManager
 	private static String timerKey(WorldPoint location, PatchType patchType)
 	{
 		return location.getX() + ":" + location.getY() + ":" + location.getPlane() + ":" + patchType.name();
+	}
+
+	private boolean isEnabledPatchLocation(WorldPoint location, PatchType patchType)
+	{
+		return isKnownPatchLocation(location, patchType)
+			&& PatchLocationSelection.isEnabled(config, PatchLocationCatalog.name(location));
+	}
+
+	private static boolean isKnownPatchLocation(WorldPoint location, PatchType patchType)
+	{
+		return FarmRunCatalog.hasPatch(PatchLocationCatalog.name(location), patchType);
 	}
 
 	private void loadTimer(PatchTimer timer)

@@ -32,6 +32,18 @@ final class FarmRunCatalog
 		return enabled;
 	}
 
+	static boolean hasPatch(String location, PatchType patchType)
+	{
+		for (FarmRunPatch patch : PATCHES)
+		{
+			if (patch.getLocation().equals(location) && patch.getPatchType() == patchType)
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
 	private static List<FarmRunPatch> build()
 	{
 		List<FarmRunPatch> patches = new ArrayList<>();
@@ -94,6 +106,7 @@ final class FarmRunCatalog
 
 		// Specialty patches, grouped to minimize repeat travel where possible.
 		add(patches, "Farming Guild", "", PatchType.HESPORI);
+		add(patches, "Farming Guild", "", PatchType.ANIMA);
 		add(patches, "Farming Guild", "", PatchType.CELASTRUS);
 		add(patches, "Farming Guild", "", PatchType.REDWOOD);
 		add(patches, "Farming Guild", "", PatchType.SPIRIT_TREE);

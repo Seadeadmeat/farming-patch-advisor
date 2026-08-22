@@ -18,6 +18,8 @@ public class PatchClassifierTest
 		assertEquals(PatchType.HARDWOOD_TREE, PatchClassifier.classify("Hardwood tree patch"));
 		assertEquals(PatchType.REDWOOD, PatchClassifier.classify("Redwood tree patch"));
 		assertEquals(PatchType.ALLOTMENT, PatchClassifier.classify("Allotment"));
+		assertEquals(PatchType.MUSHROOM, PatchClassifier.classify("Mushrooms patch"));
+		assertEquals(PatchType.ANIMA, PatchClassifier.classify("Anima patch"));
 		assertEquals(PatchType.CORAL, PatchClassifier.classify("Coral patch"));
 	}
 
@@ -45,6 +47,7 @@ public class PatchClassifierTest
 		assertEquals(PatchType.FLOWER, PatchClassifier.classifyGrowing("Flower patch"));
 		assertEquals(PatchType.TREE, PatchClassifier.classifyGrowing("Magic tree"));
 		assertEquals(PatchType.FRUIT_TREE, PatchClassifier.classifyGrowing("Dragonfruit tree"));
+		assertEquals(PatchType.ANIMA, PatchClassifier.classifyGrowing("Iasor plant"));
 	}
 
 	@Test
@@ -55,5 +58,25 @@ public class PatchClassifierTest
 		assertFalse(PatchClassifier.isFarmRunPatchObject(ObjectID.GARDEN_WHITE_TREE_FRUIT_4));
 		assertFalse(PatchClassifier.isFarmRunPatchObject(ObjectID.GARDEN_WHITE_TREE_DEAD));
 		assertTrue(PatchClassifier.isFarmRunPatchObject(ObjectID.TREE_PATCH_WEEDED));
+	}
+
+	@Test
+	public void recognizesOnlyTheRealTrollStrongholdHerbPatchObjects()
+	{
+		assertEquals(PatchType.HERB,
+			PatchClassifier.classify(ObjectID.MYARM_REALPATCH_EMPTY_ACTIVE, "Farming patch"));
+		assertEquals(PatchType.HERB,
+			PatchClassifier.classifyGrowing(ObjectID.MYARM_REALPATCH_HERB3_ACTIVE, "Plant"));
+		assertTrue(PatchClassifier.isSpecialHerbPatchObject(ObjectID.MYARM_HERBPATCH));
+		assertTrue(PatchClassifier.isSpecialHerbPatchObject(ObjectID.MYARM_REALPATCH_HERB4_DEAD_ACTIVE));
+		assertFalse(PatchClassifier.isSpecialHerbPatchObject(ObjectID.MYARM_FAKEPATCH_EMPTY));
+	}
+
+	@Test
+	public void recognizesOnlyTheRealWeissHerbPatchObject()
+	{
+		assertEquals(PatchType.HERB, PatchClassifier.classify(33176, "Herb patch"));
+		assertTrue(PatchClassifier.isSpecialHerbPatchObject(33176));
+		assertFalse(PatchClassifier.isSpecialHerbPatchObject(33177));
 	}
 }

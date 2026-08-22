@@ -1,6 +1,16 @@
 # Farming Patch Advisor
 
-A RuneLite farm-run assistant that recommends crops, tracks patch growth, and prepares the items needed for configurable farming routes.
+Plan and track efficient farm runs with patch highlights, persistent growth timers, customizable run checklists, bank and Seed Vault support, farming contract assistance, crop recommendations, protection payments, and patch-care reminders.
+
+## How to use
+
+1. **Configure settings.** Choose a **Seed recommendation**, set any **Crop overrides**, select the patch types for each run, and disable locked areas under **Patch locations**.
+2. **Set up overlays.** Enable **Show timer overlay** and **Show run checklist**, then hold `Alt` in RuneLite to move them. Enable **Bank-side checklist** and choose its side and height for a compact checklist beside the bank or Seed Vault.
+3. **Scan your storage.** Open your bank and the Farming Guild Seed Vault once so recommendations and checklist quantities reflect the seeds, saplings, tools, compost, and payments you own.
+4. **Choose a run.** Open the **Farm Run** side panel and select a run from the dropdown. Patch highlights, timers, checklists, and the bank filter follow that selection.
+5. **Plant and inspect.** Follow the highlighted patches and checklist. Planting starts persistent timers, while inspecting an existing crop updates its crop, stage, health, and estimated time remaining.
+6. **Care for patches.** Follow the compost and water reminders above supported patches. Diseased and dead patches receive colored outlines and remedy guidance.
+7. **Use the bank filter.** Open a bank or the Seed Vault and select **Farm Run Filter** to show only the items needed for the selected run and active Farming Guild contract.
 
 ## Features
 
@@ -19,7 +29,7 @@ A RuneLite farm-run assistant that recommends crops, tracks patch growth, and pr
 - Tracks the current Farming Guild contract from Guildmaster Jane (with RuneLite Time Tracking fallback), shows its crop, patch, seed, payment, inventory count, and timer in the Farm Run panel, and highlights the matching guild patch and required items.
 - Adds a `Farm Run` button above the bank incinerator controls that filters the bank to the current checklist.
 - Shows a compact missing-items checklist beside the bank or seed vault, with configurable side and vertical alignment, while temporarily hiding the primary movable checklist.
-- Supports allotment, flower, herb, hops, bush, tree, fruit tree, hardwood, cactus, mushroom, belladonna, calquat, spirit tree, seaweed, grapevine, celastrus, redwood, Hespori, crystal tree, and coral patches.
+- Supports allotment, flower, herb, hops, bush, tree, fruit tree, hardwood, cactus, mushroom, belladonna, calquat, spirit tree, seaweed, grapevine, celastrus, redwood, Hespori, anima, crystal tree, and coral patches.
 - Works offline and uses RuneLite `gameval` item constants rather than hard-coded item IDs.
 
 Automatic recommendations do not attempt to optimize Grand Exchange profit. Use the per-category crop overrides when a specific crop is preferred.

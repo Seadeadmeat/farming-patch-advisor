@@ -151,6 +151,7 @@ final class CropCatalog
 			seed("Asgarnian", 8, ItemID.ASGARNIAN_HOP_SEED),
 			seed("Jute", 13, ItemID.JUTE_SEED),
 			seed("Yanillian", 16, ItemID.YANILLIAN_HOP_SEED),
+			seed("Flax", 18, ItemID.FLAX_SEED, 3),
 			seed("Krandorian", 21, ItemID.KRANDORIAN_HOP_SEED),
 			seed("Wildblood", 28, ItemID.WILDBLOOD_HOP_SEED),
 			seed("Hemp", 37, ItemID.HEMP_SEED, 3),
@@ -200,6 +201,10 @@ final class CropCatalog
 		add(crops, PatchType.CELASTRUS, 1, crop("Celastrus sapling", 85, ItemID.PLANTPOT_CELASTRUS_TREE_SAPLING));
 		add(crops, PatchType.REDWOOD, 1, crop("Redwood sapling", 90, ItemID.PLANTPOT_REDWOOD_TREE_SAPLING));
 		add(crops, PatchType.HESPORI, 1, seed("Hespori", 65, ItemID.HESPORI_SEED));
+		add(crops, PatchType.ANIMA, 1,
+			seed("Attas", 76, ItemID.ATTAS_SEED),
+			seed("Iasor", 76, ItemID.IASOR_SEED),
+			seed("Kronos", 76, ItemID.KRONOS_SEED));
 		add(crops, PatchType.CRYSTAL_TREE, 1, crop("Crystal sapling", 74, ItemID.PLANTPOT_CRYSTAL_TREE_SAPLING));
 		add(crops, PatchType.CORAL, 1,
 			crop("Elkhorn fragment", "Elkhorn frag", 28, ItemID.CORAL_ELKHORN_FRAG),

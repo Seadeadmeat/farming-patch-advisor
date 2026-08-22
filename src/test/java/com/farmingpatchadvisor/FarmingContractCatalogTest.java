@@ -64,6 +64,8 @@ public class FarmingContractCatalogTest
 			"  You'll be wanting a reward then.   Here you go!  "));
 		assertTrue(FarmingContractCatalog.isRewarded(
 			"You have completed your farming contract."));
+		assertTrue(FarmingContractCatalog.isRewarded(
+			"You've completed a Farming Guild Contract. You should return to Guildmaster Jane."));
 		assertTrue(FarmingContractCatalog.isNoContractDialogue(
 			"Would you like another contract?"));
 		assertTrue(FarmingContractCatalog.isNoContractDialogue(

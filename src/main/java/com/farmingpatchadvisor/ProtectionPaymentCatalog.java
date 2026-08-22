@@ -41,6 +41,7 @@ final class ProtectionPaymentCatalog
 		add(payments, ItemID.ASGARNIAN_HOP_SEED, payment("Onions(10)", ItemID.SACK_ONION_10, 1));
 		add(payments, ItemID.JUTE_SEED, payment("Barley malt", ItemID.BARLEY_MALT, 6));
 		add(payments, ItemID.YANILLIAN_HOP_SEED, payment("Tomatoes(5)", ItemID.BASKET_TOMATO_5, 1));
+		add(payments, ItemID.FLAX_SEED, payment("Grain", ItemID.GRAIN, 6));
 		add(payments, ItemID.KRANDORIAN_HOP_SEED, payment("Cabbages(10)", ItemID.SACK_CABBAGE_10, 3));
 		add(payments, ItemID.WILDBLOOD_HOP_SEED, payment("Nasturtiums", ItemID.NASTURTIUM, 1));
 		add(payments, ItemID.HEMP_SEED, payment("Flax", ItemID.FLAX, 6));

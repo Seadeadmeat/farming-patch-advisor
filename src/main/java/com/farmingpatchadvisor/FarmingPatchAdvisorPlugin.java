@@ -145,7 +145,7 @@ public class FarmingPatchAdvisorPlugin extends Plugin
 	public void onGameObjectSpawned(GameObjectSpawned event)
 	{
 		GameObject object = event.getGameObject();
-		if (getPatchType(object) != null)
+		if (getRecognizedPatchType(object) != null)
 		{
 			patchObjects.add(object);
 		}
@@ -278,6 +278,13 @@ public class FarmingPatchAdvisorPlugin extends Plugin
 
 	PatchType getPatchType(GameObject object)
 	{
+		PatchType patchType = getRecognizedPatchType(object);
+		String location = PatchLocationCatalog.name(object.getWorldLocation());
+		return patchType != null && PatchLocationSelection.isEnabled(config, location) ? patchType : null;
+	}
+
+	private PatchType getRecognizedPatchType(GameObject object)
+	{
 		if (!PatchClassifier.isFarmRunPatchObject(object.getId()))
 		{
 			return null;
@@ -290,22 +297,23 @@ public class FarmingPatchAdvisorPlugin extends Plugin
 		String name = composition == null ? "" : composition.getName();
 		// Decorative fields and crop scenery can share names with real Farming crops, but
 		// only an actual player-usable Farming patch exposes the Guide action.
-		if (!PatchClassifier.hasAction(composition, "Guide"))
+		if (!PatchClassifier.hasAction(composition, "Guide")
+			&& !PatchClassifier.isSpecialHerbPatchObject(object.getId()))
 		{
 			return null;
 		}
 		// Growing objects often use the crop name (for example "Strawberry plant") instead
 		// of the empty patch name. Classify that live name before consulting a nearby timer,
 		// otherwise an adjacent one-tile patch can inherit the allotment timer after planting.
-		PatchType patchType = PatchClassifier.classifyGrowing(name);
+		PatchType patchType = PatchClassifier.classifyGrowing(object.getId(), name);
 		boolean farmingState = PatchClassifier.hasAction(composition, "Inspect");
 		if (patchType == null && farmingState)
 		{
 			PatchTimer timer = timerManager.findTimer(object.getWorldLocation(), 4);
 			patchType = timer == null ? null : timer.getPatchType();
 		}
-		return patchType != null && PatchLocationSelection.isEnabled(config,
-			PatchLocationCatalog.name(object.getWorldLocation())) ? patchType : null;
+		String location = PatchLocationCatalog.name(object.getWorldLocation());
+		return patchType != null && FarmRunCatalog.hasPatch(location, patchType) ? patchType : null;
 	}
 
 	Crop getPatchCrop(GameObject object, PatchType patchType)

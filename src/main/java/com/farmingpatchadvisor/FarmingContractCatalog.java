@@ -128,7 +128,8 @@ final class FarmingContractCatalog
 	{
 		return normalize(text).contains(REWARD)
 			|| normalize(text).contains("you have completed your farming contract")
-			|| normalize(text).contains("you've completed your farming contract");
+			|| normalize(text).contains("you've completed your farming contract")
+			|| normalize(text).contains("you've completed a farming guild contract");
 	}
 
 	static boolean isNoContractDialogue(String text)

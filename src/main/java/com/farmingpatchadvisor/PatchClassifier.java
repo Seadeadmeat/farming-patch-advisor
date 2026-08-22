@@ -6,6 +6,8 @@ import net.runelite.api.gameval.ObjectID;
 
 final class PatchClassifier
 {
+	private static final int WEISS_HERB_PATCH = 33176;
+
 	private PatchClassifier()
 	{
 	}
@@ -91,7 +93,8 @@ final class PatchClassifier
 		{
 			return PatchType.CACTUS;
 		}
-		if (name.contains("mushroom patch") || name.contains("bittercap patch"))
+		if (name.contains("mushroom patch") || name.contains("mushrooms patch")
+			|| name.contains("bittercap patch"))
 		{
 			return PatchType.MUSHROOM;
 		}
@@ -119,11 +122,20 @@ final class PatchClassifier
 		{
 			return PatchType.HESPORI;
 		}
+		if (name.contains("anima patch"))
+		{
+			return PatchType.ANIMA;
+		}
 		if (name.contains("coral patch"))
 		{
 			return PatchType.CORAL;
 		}
 		return null;
+	}
+
+	static PatchType classify(int objectId, String objectName)
+	{
+		return isSpecialHerbPatchObject(objectId) ? PatchType.HERB : classify(objectName);
 	}
 
 	static PatchType classifyGrowing(String objectName)
@@ -140,6 +152,18 @@ final class PatchClassifier
 		}
 		Crop crop = CropCatalog.findInAnyText(name);
 		return crop == null ? null : crop.getPatchType();
+	}
+
+	static PatchType classifyGrowing(int objectId, String objectName)
+	{
+		return isSpecialHerbPatchObject(objectId) ? PatchType.HERB : classifyGrowing(objectName);
+	}
+
+	static boolean isSpecialHerbPatchObject(int objectId)
+	{
+		return objectId == WEISS_HERB_PATCH
+			|| objectId >= ObjectID.MYARM_HERBPATCH
+			&& objectId <= ObjectID.MYARM_REALPATCH_HERB4_DEAD_ACTIVE;
 	}
 
 	static boolean hasAction(ObjectComposition composition, String expected)

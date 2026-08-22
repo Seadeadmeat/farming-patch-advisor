@@ -12,6 +12,7 @@ public class CropGrowthTimesTest
 	{
 		assertEquals(Duration.ofMinutes(70), CropGrowthTimes.forCrop(CropCatalog.recommend(PatchType.ALLOTMENT, 61)));
 		assertEquals(Duration.ofMinutes(480), CropGrowthTimes.forCrop(CropCatalog.recommend(PatchType.TREE, 75)));
+		assertEquals(Duration.ofMinutes(5120), CropGrowthTimes.forCrop(CropCatalog.recommend(PatchType.ANIMA, 76)));
 	}
 
 	@Test

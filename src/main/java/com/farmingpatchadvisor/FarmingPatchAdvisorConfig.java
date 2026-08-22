@@ -142,9 +142,11 @@ public interface FarmingPatchAdvisorConfig extends Config
 	default CropOverrides.Redwood redwoodOverride() { return CropOverrides.Redwood.AUTOMATIC; }
 	@ConfigItem(keyName = "hesporiOverride", name = "Hespori", description = "Crop to recommend for Hespori patches", position = 17, section = cropOverridesSection)
 	default CropOverrides.Hespori hesporiOverride() { return CropOverrides.Hespori.AUTOMATIC; }
-	@ConfigItem(keyName = "crystalTreeOverride", name = "Crystal tree", description = "Crop to recommend for crystal-tree patches", position = 18, section = cropOverridesSection)
+	@ConfigItem(keyName = "animaOverride", name = "Anima", description = "Seed to recommend for the Farming Guild anima patch", position = 18, section = cropOverridesSection)
+	default CropOverrides.Anima animaOverride() { return CropOverrides.Anima.AUTOMATIC; }
+	@ConfigItem(keyName = "crystalTreeOverride", name = "Crystal tree", description = "Crop to recommend for crystal-tree patches", position = 19, section = cropOverridesSection)
 	default CropOverrides.CrystalTree crystalTreeOverride() { return CropOverrides.CrystalTree.AUTOMATIC; }
-	@ConfigItem(keyName = "coralOverride", name = "Coral", description = "Crop to recommend for coral patches", position = 19, section = cropOverridesSection)
+	@ConfigItem(keyName = "coralOverride", name = "Coral", description = "Crop to recommend for coral patches", position = 20, section = cropOverridesSection)
 	default CropOverrides.Coral coralOverride() { return CropOverrides.Coral.AUTOMATIC; }
 
 	@ConfigItem(
@@ -166,7 +168,7 @@ public interface FarmingPatchAdvisorConfig extends Config
 	)
 	default boolean showTimerOverlay()
 	{
-		return true;
+		return false;
 	}
 
 	@ConfigItem(
@@ -177,7 +179,7 @@ public interface FarmingPatchAdvisorConfig extends Config
 	)
 	default boolean showChecklistOverlay()
 	{
-		return true;
+		return false;
 	}
 
 	@ConfigItem(
@@ -356,12 +358,16 @@ public interface FarmingPatchAdvisorConfig extends Config
 		description = "Include Hespori seeds", position = 7, section = specialtyRunSection)
 	default boolean checklistHespori() { return true; }
 
+	@ConfigItem(keyName = "checklistAnima", name = "Include anima",
+		description = "Include the Farming Guild anima patch", position = 8, section = specialtyRunSection)
+	default boolean checklistAnima() { return true; }
+
 	@ConfigItem(keyName = "checklistCrystalTree", name = "Include crystal trees",
-		description = "Include crystal-tree saplings", position = 8, section = specialtyRunSection)
+		description = "Include crystal-tree saplings", position = 9, section = specialtyRunSection)
 	default boolean checklistCrystalTree() { return true; }
 
 	@ConfigItem(keyName = "checklistCoral", name = "Include coral",
-		description = "Include coral fragments", position = 9, section = specialtyRunSection)
+		description = "Include coral fragments", position = 10, section = specialtyRunSection)
 	default boolean checklistCoral() { return true; }
 
 	@Alpha

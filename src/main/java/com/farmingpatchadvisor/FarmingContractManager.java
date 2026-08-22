@@ -108,7 +108,9 @@ final class FarmingContractManager
 
 	boolean checkGameMessage(String message)
 	{
-		return FarmingContractCatalog.isCancelled(Text.removeTags(message)) && setContract(null);
+		String text = Text.removeTags(message);
+		return (FarmingContractCatalog.isCancelled(text)
+			|| FarmingContractCatalog.isRewarded(text)) && setContract(null);
 	}
 
 	private boolean setContract(FarmingContract next)

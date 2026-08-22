@@ -54,6 +54,7 @@ enum FarmRunType
 			case CELASTRUS:
 			case REDWOOD:
 			case HESPORI:
+			case ANIMA:
 			case CRYSTAL_TREE:
 			case CORAL:
 				return SPECIALTY;

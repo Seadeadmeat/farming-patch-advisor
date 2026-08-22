@@ -50,6 +50,7 @@ final class CropGrowthTimes
 			case "Asgarnian":
 			case "Jute": minutes = 50; break;
 			case "Yanillian": minutes = 60; break;
+			case "Flax": minutes = 60; break;
 			case "Krandorian": minutes = 70; break;
 			case "Wildblood":
 			case "Hemp": minutes = 80; break;
@@ -94,6 +95,9 @@ final class CropGrowthTimes
 			case "Celastrus sapling": minutes = 800; break;
 			case "Redwood sapling": minutes = 6400; break;
 			case "Hespori": minutes = 1920; break;
+			case "Attas":
+			case "Iasor":
+			case "Kronos": minutes = 5120; break;
 			case "Crystal sapling": minutes = 480; break;
 			case "Elkhorn fragment":
 			case "Pillar fragment":
