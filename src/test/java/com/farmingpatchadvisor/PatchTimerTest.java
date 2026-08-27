@@ -1,5 +1,6 @@
 package com.farmingpatchadvisor;
 
+import java.awt.Color;
 import java.time.Duration;
 import java.time.Instant;
 import net.runelite.api.coords.WorldPoint;
@@ -12,6 +13,56 @@ import static org.junit.Assert.assertTrue;
 
 public class PatchTimerTest
 {
+	@Test
+	public void usesConsistentTimerStateColors()
+	{
+		Crop potato = CropCatalog.findByName(PatchType.ALLOTMENT, "Potato");
+		Instant now = Instant.parse("2026-08-26T00:00:00Z");
+		WorldPoint location = new WorldPoint(0, 0, 0);
+
+		PatchTimer growing = new PatchTimer(location, PatchType.ALLOTMENT, potato,
+			now, now.plusSeconds(600), true, -1, -1, false, false);
+		PatchTimer ready = new PatchTimer(location, PatchType.ALLOTMENT, potato,
+			now.minusSeconds(600), now, true, -1, -1, false, false);
+		PatchTimer dead = new PatchTimer(location, PatchType.ALLOTMENT, potato,
+			now, now.plusSeconds(600), true, -1, -1, true, false);
+		PatchTimer diseased = new PatchTimer(location, PatchType.ALLOTMENT, potato,
+			now, now.plusSeconds(600), true, -1, -1, false, true);
+		PatchTimer picked = new PatchTimer(location, PatchType.ALLOTMENT, potato,
+			now, now.plusSeconds(600), true, -1, -1, false, false, false, false, true);
+
+		assertEquals(Color.WHITE, PatchTimerOverlay.stateColor(growing, now));
+		assertEquals(Color.GREEN, PatchTimerOverlay.stateColor(ready, now));
+		assertEquals(Color.RED, PatchTimerOverlay.stateColor(dead, now));
+		assertEquals(Color.ORANGE, PatchTimerOverlay.stateColor(diseased, now));
+		assertEquals(Color.WHITE, PatchTimerOverlay.stateColor(picked, now));
+		assertEquals("PICKED", FarmingPatchOverlay.patchTimeRemaining(picked, now));
+	}
+
+	@Test
+	public void recognizesEveryPickStylePatchAction()
+	{
+		assertTrue(PatchTimerManager.isPickedOption("Pick"));
+		assertTrue(PatchTimerManager.isPickedOption("Pick-fruit"));
+		assertTrue(PatchTimerManager.isPickedOption("Pick-from"));
+		assertTrue(PatchTimerManager.isPickedOption("Pick-spine"));
+		assertFalse(PatchTimerManager.isPickedOption("Harvest"));
+		assertFalse(PatchTimerManager.isPickedOption(null));
+	}
+
+	@Test
+	public void formatsPlantedPatchTimeInsteadOfSeedQuantity()
+	{
+		Crop potato = CropCatalog.findByName(PatchType.ALLOTMENT, "Potato");
+		Instant now = Instant.parse("2026-08-26T00:00:00Z");
+		PatchTimer growing = new PatchTimer(new WorldPoint(0, 0, 0), PatchType.ALLOTMENT,
+			potato, now, now.plusSeconds(90), true, -1, -1, false, false);
+
+		assertEquals("01:30", FarmingPatchOverlay.patchTimeRemaining(growing, now));
+		assertEquals("Inspect patch", FarmingPatchOverlay.patchTimeRemaining(null, now));
+		assertEquals("READY", FarmingPatchOverlay.patchTimeRemaining(growing, now.plusSeconds(90)));
+	}
+
 	@Test
 	public void groupsAdjacentPatchObjectsUsingTheirFullSceneFootprints()
 	{
@@ -200,5 +251,24 @@ public class PatchTimerTest
 		assertTrue(FarmingPatchOverlay.usesContractGroundOutline(true, maple));
 		assertFalse(FarmingPatchOverlay.usesContractGroundOutline(false, maple));
 		assertFalse(FarmingPatchOverlay.usesContractGroundOutline(true, null));
+	}
+
+	@Test
+	public void hidesContractSeedRequirementOnceTheCropIsTracked()
+	{
+		Instant now = Instant.parse("2026-08-26T00:00:00Z");
+		Crop ranarr = CropCatalog.findByName(PatchType.HERB, "Ranarr");
+		WorldPoint farmingGuild = new WorldPoint(1240, 3720, 0);
+		PatchTimer growing = new PatchTimer(farmingGuild, PatchType.HERB, ranarr,
+			now, now.plus(Duration.ofMinutes(80)), true, -1, -1, false, false);
+		PatchTimer diseased = new PatchTimer(farmingGuild, PatchType.HERB, ranarr,
+			now, now.plus(Duration.ofMinutes(80)), true, -1, -1, false, true);
+		PatchTimer dead = new PatchTimer(farmingGuild, PatchType.HERB, ranarr,
+			now, now.plus(Duration.ofMinutes(80)), true, -1, -1, true, false);
+
+		assertTrue(FarmingPatchPanel.contractSeedNeeded(null));
+		assertFalse(FarmingPatchPanel.contractSeedNeeded(growing));
+		assertFalse(FarmingPatchPanel.contractSeedNeeded(diseased));
+		assertTrue(FarmingPatchPanel.contractSeedNeeded(dead));
 	}
 }

@@ -96,12 +96,13 @@ final class PatchTimerManager
 				int totalStages = fields.length >= 10 ? Integer.parseInt(fields[9]) : -1;
 				boolean dead = fields.length >= 11 && "D".equals(fields[10]);
 				boolean diseased = fields.length >= 11 && "S".equals(fields[10]);
+				boolean picked = fields.length >= 11 && "K".equals(fields[10]);
 				boolean compostApplied = fields.length >= 12 && "C".equals(fields[11]);
 				boolean watered = fields.length >= 13 && "W".equals(fields[12]);
 				PatchTimer timer = new PatchTimer(location, patchType, crop,
 					Instant.ofEpochMilli(Long.parseLong(fields[5])),
 					Instant.ofEpochMilli(Long.parseLong(fields[6])), plantedTimer, observedStage,
-					totalStages, dead, diseased, compostApplied, watered);
+					totalStages, dead, diseased, compostApplied, watered, picked);
 				loadTimer(timer);
 			}
 			catch (RuntimeException ex)
@@ -163,6 +164,11 @@ final class PatchTimerManager
 		if ("Check-health".equalsIgnoreCase(event.getMenuOption()) && isGameObjectAction(event.getMenuAction()))
 		{
 			markCompletedPatch(event);
+			return;
+		}
+		if (isPickedOption(event.getMenuOption()) && isGameObjectAction(event.getMenuAction()))
+		{
+			markPickedPatch(event);
 			return;
 		}
 		if (isCompletionOption(event.getMenuOption()) && isGameObjectAction(event.getMenuAction()))
@@ -339,6 +345,10 @@ final class PatchTimerManager
 			confirmCareAction(existing.key(), false);
 			existing = timers.get(existing.key());
 		}
+		if (dead && existing.isPicked() && !hasExplicitDeadName(name))
+		{
+			return;
+		}
 		if (dead && !existing.isDead())
 		{
 			timers.put(existing.key(), unhealthyTimer(existing, true));
@@ -398,7 +408,7 @@ final class PatchTimerManager
 				.append(timer.isPlantedTimer() ? 'P' : 'I').append(',')
 				.append(timer.getObservedStage()).append(',')
 				.append(timer.getTotalStages()).append(',')
-				.append(timer.isDead() ? 'D' : timer.isDiseased() ? 'S' : 'A').append(',')
+				.append(timer.isDead() ? 'D' : timer.isDiseased() ? 'S' : timer.isPicked() ? 'K' : 'A').append(',')
 				.append(timer.isCompostApplied() ? 'C' : 'N').append(',')
 				.append(timer.isWatered() ? 'W' : 'N');
 		}
@@ -466,6 +476,32 @@ final class PatchTimerManager
 		if (timer != null)
 		{
 			timers.remove(timer.key());
+			save();
+		}
+	}
+
+	private void markPickedPatch(MenuOptionClicked event)
+	{
+		ObjectComposition composition = client.getObjectDefinition(event.getId());
+		if (composition.getImpostorIds() != null)
+		{
+			composition = composition.getImpostor();
+		}
+		PatchType patchType = composition == null ? null
+			: PatchClassifier.classifyGrowing(event.getId(), composition.getName());
+		if (patchType == null)
+		{
+			return;
+		}
+		WorldPoint clicked = WorldPoint.fromScene(client, event.getParam0(), event.getParam1(), client.getPlane());
+		if (!isEnabledPatchLocation(clicked, patchType))
+		{
+			return;
+		}
+		PatchTimer timer = findSamePatch(clicked, patchType, COMPLETION_DISTANCE);
+		if (timer != null)
+		{
+			timers.put(timer.key(), pickedTimer(timer));
 			save();
 		}
 	}
@@ -684,7 +720,7 @@ final class PatchTimerManager
 		return new PatchTimer(timer.getPatchLocation(), timer.getPatchType(), timer.getCrop(),
 			timer.getPlantedAt(), timer.getReadyAt(), timer.isPlantedTimer(),
 			timer.getObservedStage(), timer.getTotalStages(), dead, !dead,
-			timer.isCompostApplied(), timer.isWatered());
+			timer.isCompostApplied(), timer.isWatered(), false);
 	}
 
 	private static PatchTimer healthyTimer(PatchTimer timer)
@@ -692,7 +728,7 @@ final class PatchTimerManager
 		return new PatchTimer(timer.getPatchLocation(), timer.getPatchType(), timer.getCrop(),
 			timer.getPlantedAt(), timer.getReadyAt(), timer.isPlantedTimer(),
 			timer.getObservedStage(), timer.getTotalStages(), false, false,
-			timer.isCompostApplied(), timer.isWatered());
+			timer.isCompostApplied(), timer.isWatered(), false);
 	}
 
 	private static PatchTimer withCare(PatchTimer timer, boolean compostApplied, boolean watered)
@@ -700,7 +736,15 @@ final class PatchTimerManager
 		return new PatchTimer(timer.getPatchLocation(), timer.getPatchType(), timer.getCrop(),
 			timer.getPlantedAt(), timer.getReadyAt(), timer.isPlantedTimer(),
 			timer.getObservedStage(), timer.getTotalStages(), timer.isDead(), timer.isDiseased(),
-			compostApplied, watered);
+			compostApplied, watered, timer.isPicked());
+	}
+
+	private static PatchTimer pickedTimer(PatchTimer timer)
+	{
+		return new PatchTimer(timer.getPatchLocation(), timer.getPatchType(), timer.getCrop(),
+			timer.getPlantedAt(), timer.getReadyAt(), timer.isPlantedTimer(),
+			timer.getObservedStage(), timer.getTotalStages(), false, false,
+			timer.isCompostApplied(), timer.isWatered(), true);
 	}
 
 	static boolean isDeadStateMessage(String message)
@@ -751,6 +795,11 @@ final class PatchTimerManager
 		String normalized = name == null ? "" : name.toLowerCase();
 		return normalized.contains("dead") || containsAction(actions, "Clear")
 			&& !normalized.contains("stump");
+	}
+
+	private static boolean hasExplicitDeadName(String name)
+	{
+		return name != null && name.toLowerCase().contains("dead");
 	}
 
 	static boolean isDiseasedObjectState(String name, String[] actions)
@@ -926,8 +975,13 @@ final class PatchTimerManager
 	private static boolean isCompletionOption(String option)
 	{
 		String normalized = option == null ? "" : option.toLowerCase();
-		return normalized.equals("pick") || normalized.equals("pick-fruit") || normalized.equals("harvest")
-			|| normalized.equals("clear");
+		return normalized.equals("harvest") || normalized.equals("clear");
+	}
+
+	static boolean isPickedOption(String option)
+	{
+		String normalized = option == null ? "" : option.toLowerCase();
+		return normalized.startsWith("pick");
 	}
 
 	private static final class CareState

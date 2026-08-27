@@ -18,7 +18,6 @@ import net.runelite.client.ui.overlay.components.TitleComponent;
 
 final class PatchTimerOverlay extends OverlayPanel
 {
-	private static final Color READY_DARK = new Color(140, 0, 0);
 	private static final int MAX_CONTENT_WIDTH = 340;
 	private final PatchTimerManager timerManager;
 	private final FarmingPatchAdvisorConfig config;
@@ -49,9 +48,8 @@ final class PatchTimerOverlay extends OverlayPanel
 
 		for (PatchTimer timer : timerManager.getTimers())
 		{
-			boolean ready = !timer.isDead() && !timer.isDiseased()
+			boolean ready = !timer.isDead() && !timer.isDiseased() && !timer.isPicked()
 				&& !now.isBefore(timer.getReadyAt());
-			Color readyColor = (System.currentTimeMillis() / 500L) % 2 == 0 ? Color.RED : READY_DARK;
 			WorldPoint location = timer.getPatchLocation();
 			String patch = timer.getCrop().getName() + " - " + PatchLocationCatalog.name(location);
 			if (!timer.isPlantedTimer() && !timer.isDead() && !timer.isDiseased())
@@ -59,18 +57,17 @@ final class PatchTimerOverlay extends OverlayPanel
 				patch += " " + timer.getEstimatedStage(now) + "/" + timer.getTotalStages();
 			}
 			String remaining = timer.isDead() ? "DEAD" : timer.isDiseased() ? "DISEASED"
+				: timer.isPicked() ? "PICKED"
 				: ready ? "READY" : formatRemaining(Duration.between(now, timer.getReadyAt()));
 			FontMetrics metrics = graphics.getFontMetrics();
-			Color stateColor = timer.isDead() ? Color.RED : timer.isDiseased() ? Color.YELLOW
-				: ready ? readyColor : Color.WHITE;
+			Color stateColor = stateColor(timer, now);
 			int combinedWidth = metrics.stringWidth(patch) + metrics.stringWidth(remaining) + 18;
 			if (combinedWidth <= MAX_CONTENT_WIDTH)
 			{
 				contentWidth = Math.max(contentWidth, combinedWidth);
 				panelComponent.getChildren().add(LineComponent.builder()
 					.left(patch).right(remaining).leftColor(stateColor)
-					.rightColor(timer.isDead() ? Color.RED : timer.isDiseased() ? Color.YELLOW
-						: ready ? readyColor : Color.GREEN).build());
+					.rightColor(stateColor).build());
 			}
 			else
 			{
@@ -82,8 +79,7 @@ final class PatchTimerOverlay extends OverlayPanel
 				}
 				contentWidth = Math.max(contentWidth, metrics.stringWidth(remaining));
 				panelComponent.getChildren().add(LineComponent.builder().right(remaining)
-					.rightColor(timer.isDead() ? Color.RED : timer.isDiseased() ? Color.YELLOW
-						: ready ? readyColor : Color.GREEN).build());
+					.rightColor(stateColor).build());
 			}
 			String remedy = PatchRemedy.forTimer(timer);
 			if (remedy != null)
@@ -100,6 +96,23 @@ final class PatchTimerOverlay extends OverlayPanel
 		panelComponent.setPreferredSize(new Dimension(contentWidth + 20, 0));
 
 		return super.render(graphics);
+	}
+
+	static Color stateColor(PatchTimer timer, Instant now)
+	{
+		if (timer.isDead())
+		{
+			return Color.RED;
+		}
+		if (timer.isDiseased())
+		{
+			return Color.ORANGE;
+		}
+		if (timer.isPicked())
+		{
+			return Color.WHITE;
+		}
+		return now.isBefore(timer.getReadyAt()) ? Color.WHITE : Color.GREEN;
 	}
 
 	static List<String> wrapText(String text, FontMetrics metrics, int maximumWidth)

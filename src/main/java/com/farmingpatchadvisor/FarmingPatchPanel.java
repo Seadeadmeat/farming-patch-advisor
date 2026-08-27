@@ -3,6 +3,7 @@ package com.farmingpatchadvisor;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GridLayout;
@@ -29,6 +30,9 @@ import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.Timer;
 import javax.swing.JToggleButton;
+import javax.swing.SwingUtilities;
+import javax.swing.event.PopupMenuEvent;
+import javax.swing.event.PopupMenuListener;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.PluginPanel;
@@ -100,9 +104,7 @@ final class FarmingPatchPanel extends PluginPanel
 		patchScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
 		patchScrollPane.setBorder(BorderFactory.createEmptyBorder());
 		patchScrollPane.getViewport().setBackground(ColorScheme.DARK_GRAY_COLOR);
-		patchScrollPane.getVerticalScrollBar().setUI(new NarrowScrollBarUI());
-		patchScrollPane.getVerticalScrollBar().setPreferredSize(new Dimension(NarrowScrollBarUI.WIDTH, 0));
-		patchScrollPane.getVerticalScrollBar().setUnitIncrement(16);
+		styleNarrowScrollBar(patchScrollPane);
 		add(patchScrollPane, BorderLayout.CENTER);
 
 		refreshTimer = new Timer(1000, event -> rebuild());
@@ -250,6 +252,24 @@ final class FarmingPatchPanel extends PluginPanel
 				return label;
 			}
 		});
+		runFilter.addPopupMenuListener(new PopupMenuListener()
+		{
+			@Override
+			public void popupMenuWillBecomeVisible(PopupMenuEvent event)
+			{
+				SwingUtilities.invokeLater(() -> styleRunFilterPopup());
+			}
+
+			@Override
+			public void popupMenuWillBecomeInvisible(PopupMenuEvent event)
+			{
+			}
+
+			@Override
+			public void popupMenuCanceled(PopupMenuEvent event)
+			{
+			}
+		});
 		runFilter.addActionListener(event ->
 		{
 			if (!updatingRunFilter)
@@ -258,6 +278,45 @@ final class FarmingPatchPanel extends PluginPanel
 				rebuild();
 			}
 		});
+	}
+
+	private void styleRunFilterPopup()
+	{
+		Component popup = runFilter.getAccessibleContext().getAccessibleChild(0) instanceof Component
+			? (Component) runFilter.getAccessibleContext().getAccessibleChild(0) : null;
+		JScrollPane scrollPane = findScrollPane(popup);
+		if (scrollPane != null)
+		{
+			styleNarrowScrollBar(scrollPane);
+		}
+	}
+
+	private static JScrollPane findScrollPane(Component component)
+	{
+		if (component instanceof JScrollPane)
+		{
+			return (JScrollPane) component;
+		}
+		if (component instanceof Container)
+		{
+			for (Component child : ((Container) component).getComponents())
+			{
+				JScrollPane scrollPane = findScrollPane(child);
+				if (scrollPane != null)
+				{
+					return scrollPane;
+				}
+			}
+		}
+		return null;
+	}
+
+	private static void styleNarrowScrollBar(JScrollPane scrollPane)
+	{
+		scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+		scrollPane.getVerticalScrollBar().setUI(new NarrowScrollBarUI());
+		scrollPane.getVerticalScrollBar().setPreferredSize(new Dimension(NarrowScrollBarUI.WIDTH, 0));
+		scrollPane.getVerticalScrollBar().setUnitIncrement(16);
 	}
 
 	private JPanel createContractCard()
@@ -275,15 +334,19 @@ final class FarmingPatchPanel extends PluginPanel
 		Crop crop = contract.getCrop();
 		List<ProtectionPayment> payments = ProtectionPaymentCatalog.forCrop(crop);
 		PatchTimer timer = findContractTimer(crop);
-		int lineCount = 5 + Math.max(1, payments.size())
+		boolean seedNeeded = contractSeedNeeded(timer);
+		int lineCount = (seedNeeded ? 5 : 4) + Math.max(1, payments.size())
 			+ (timer != null && (timer.isDead() || timer.isDiseased()) ? 1 : 0);
 		JPanel card = createCard(20 + lineCount * 17, false, ColorScheme.MEDIUM_GRAY_COLOR);
 		addLine(card, "Farming Contract", new Color(255, 152, 31), true);
 		addLine(card, "Crop: " + contract.getName(), Color.WHITE, true);
 		addLine(card, "Patch: " + crop.getPatchType().getDisplayName() + " - Farming Guild",
 			Color.LIGHT_GRAY, false);
-		addLine(card, "Required: " + farmingLoadout.inventoryQuantity(crop.getItemId()) + "/"
-			+ crop.getQuantity() + " " + crop.getItemName(), config.seedColor(), false);
+		if (seedNeeded)
+		{
+			addLine(card, "Required: " + farmingLoadout.inventoryQuantity(crop.getItemId()) + "/"
+				+ crop.getQuantity() + " " + crop.getItemName(), config.seedColor(), false);
+		}
 		if (payments.isEmpty())
 		{
 			addLine(card, "Payment: None", Color.GRAY, false);
@@ -303,13 +366,13 @@ final class FarmingPatchPanel extends PluginPanel
 		else
 		{
 			Instant now = Instant.now();
-			boolean ready = !timer.isDead() && !timer.isDiseased()
+			boolean ready = !timer.isDead() && !timer.isDiseased() && !timer.isPicked()
 				&& !now.isBefore(timer.getReadyAt());
 			addLine(card, "Status: " + (timer.isDead() ? "DEAD" : timer.isDiseased() ? "DISEASED"
+				: timer.isPicked() ? "PICKED"
 				: ready ? "READY"
 				: PatchTimerOverlay.formatRemaining(Duration.between(now, timer.getReadyAt()))),
-				timer.isDead() ? Color.RED : timer.isDiseased() ? Color.YELLOW
-					: ready ? Color.RED : Color.GREEN, true);
+				PatchTimerOverlay.stateColor(timer, now), true);
 			String remedy = PatchRemedy.forTimer(timer);
 			if (remedy != null)
 			{
@@ -317,6 +380,11 @@ final class FarmingPatchPanel extends PluginPanel
 			}
 		}
 		return card;
+	}
+
+	static boolean contractSeedNeeded(PatchTimer timer)
+	{
+		return timer == null || timer.isDead();
 	}
 
 	private PatchTimer findContractTimer(Crop crop)
@@ -401,9 +469,8 @@ final class FarmingPatchPanel extends PluginPanel
 	private JPanel createTrackedCard(int order, FarmRunPatch patch, List<PatchTimer> matchingTimers)
 	{
 		Instant now = Instant.now();
-		boolean ready = matchingTimers.stream().anyMatch(timer -> timer.isDead() || timer.isDiseased()
-			|| !now.isBefore(timer.getReadyAt()));
-		Color readyColor = (System.currentTimeMillis() / 500L) % 2 == 0 ? Color.RED : new Color(140, 0, 0);
+		Color cardStateColor = combinedStateColor(matchingTimers, now);
+		boolean attention = !Color.WHITE.equals(cardStateColor);
 		int height = 48 + matchingTimers.size() * 57;
 		for (PatchTimer timer : matchingTimers)
 		{
@@ -413,8 +480,8 @@ final class FarmingPatchPanel extends PluginPanel
 				height += 18;
 			}
 		}
-		JPanel card = createCard(height, ready, readyColor);
-		addLine(card, order + ". " + patch.getDisplayName(), ready ? readyColor : Color.WHITE, true);
+		JPanel card = createCard(height, attention, cardStateColor);
+		addLine(card, order + ". " + patch.getDisplayName(), cardStateColor, true);
 		addLine(card, "Patch: " + patch.getPatchType().getDisplayName()
 			+ (patch.getPatchCount() > 1 ? " (" + matchingTimers.size() + "/" + patch.getPatchCount() + " tracked)" : ""),
 			Color.LIGHT_GRAY, false);
@@ -422,20 +489,20 @@ final class FarmingPatchPanel extends PluginPanel
 		for (PatchTimer timer : matchingTimers)
 		{
 			String prefix = matchingTimers.size() > 1 ? timerNumber++ + ". " : "";
-			addLine(card, prefix + "Planted: " + timer.getCrop().getName() + " x" + timer.getCrop().getQuantity(), Color.LIGHT_GRAY, false);
+			addLine(card, prefix + "Planted: " + timer.getCrop().getName(), Color.LIGHT_GRAY, false);
 			addLine(card, (timer.isPlantedTimer() ? "Started: " : "Inspected: ") + CLOCK.format(timer.getPlantedAt()), Color.LIGHT_GRAY, false);
-			if (!timer.isPlantedTimer() && !timer.isDead() && !timer.isDiseased())
+			if (!timer.isPlantedTimer() && !timer.isDead() && !timer.isDiseased() && !timer.isPicked())
 			{
 				addLine(card, "Stage: " + timer.getEstimatedStage(now) + "/" + timer.getTotalStages() + " (maximum estimate)", Color.LIGHT_GRAY, false);
 			}
-			boolean timerReady = !timer.isDead() && !timer.isDiseased()
+			boolean timerReady = !timer.isDead() && !timer.isDiseased() && !timer.isPicked()
 				&& !now.isBefore(timer.getReadyAt());
 			String remaining = timer.isDead() ? "DEAD" : timer.isDiseased() ? "DISEASED"
+				: timer.isPicked() ? "PICKED"
 				: timerReady ? "READY"
 				: PatchTimerOverlay.formatRemaining(Duration.between(now, timer.getReadyAt()));
 			addLine(card, "Time remaining: " + remaining,
-				timer.isDead() ? Color.RED : timer.isDiseased() ? Color.YELLOW
-					: timerReady ? readyColor : Color.GREEN, true);
+				PatchTimerOverlay.stateColor(timer, now), true);
 			String remedy = PatchRemedy.forTimer(timer);
 			if (remedy != null)
 			{
@@ -444,6 +511,28 @@ final class FarmingPatchPanel extends PluginPanel
 		}
 		addResetMenu(card, patch);
 		return card;
+	}
+
+	private static Color combinedStateColor(List<PatchTimer> timers, Instant now)
+	{
+		Color color = Color.WHITE;
+		for (PatchTimer timer : timers)
+		{
+			Color timerColor = PatchTimerOverlay.stateColor(timer, now);
+			if (Color.RED.equals(timerColor))
+			{
+				return Color.RED;
+			}
+			if (Color.ORANGE.equals(timerColor))
+			{
+				color = Color.ORANGE;
+			}
+			else if (Color.GREEN.equals(timerColor) && Color.WHITE.equals(color))
+			{
+				color = Color.GREEN;
+			}
+		}
+		return color;
 	}
 
 	private void addResetMenu(JPanel card, FarmRunPatch patch)

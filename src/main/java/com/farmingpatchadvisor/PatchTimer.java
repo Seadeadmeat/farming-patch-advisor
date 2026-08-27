@@ -15,6 +15,7 @@ final class PatchTimer
 	private final int totalStages;
 	private final boolean dead;
 	private final boolean diseased;
+	private final boolean picked;
 	private final boolean compostApplied;
 	private final boolean watered;
 
@@ -47,6 +48,14 @@ final class PatchTimer
 		boolean plantedTimer, int observedStage, int totalStages, boolean dead, boolean diseased,
 		boolean compostApplied, boolean watered)
 	{
+		this(patchLocation, patchType, crop, plantedAt, readyAt, plantedTimer, observedStage,
+			totalStages, dead, diseased, compostApplied, watered, false);
+	}
+
+	PatchTimer(WorldPoint patchLocation, PatchType patchType, Crop crop, Instant plantedAt, Instant readyAt,
+		boolean plantedTimer, int observedStage, int totalStages, boolean dead, boolean diseased,
+		boolean compostApplied, boolean watered, boolean picked)
+	{
 		this.patchLocation = patchLocation;
 		this.patchType = patchType;
 		this.crop = crop;
@@ -57,6 +66,7 @@ final class PatchTimer
 		this.totalStages = totalStages;
 		this.dead = dead;
 		this.diseased = diseased;
+		this.picked = picked;
 		this.compostApplied = compostApplied;
 		this.watered = watered;
 	}
@@ -114,6 +124,11 @@ final class PatchTimer
 	boolean isDiseased()
 	{
 		return diseased;
+	}
+
+	boolean isPicked()
+	{
+		return picked;
 	}
 
 	boolean isCompostApplied()

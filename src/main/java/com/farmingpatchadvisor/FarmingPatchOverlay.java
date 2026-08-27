@@ -7,6 +7,8 @@ import java.awt.Graphics2D;
 import java.awt.Rectangle;
 import java.awt.Stroke;
 import java.awt.geom.Area;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -103,8 +105,10 @@ final class FarmingPatchOverlay extends Overlay
 
 			if (!patchArea.isEmpty())
 			{
+				Instant now = Instant.now();
 				Color color = timer != null && timer.isDead() ? Color.RED
 					: timer != null && timer.isDiseased() ? Color.YELLOW
+						: timer != null && timer.isPicked() ? Color.WHITE
 						: clearForContract ? CONTRACT_CLEAR_COLOR : config.seedColor();
 				renderPatchBoundary(graphics, patchArea, patchTiles, representative.object, color);
 
@@ -118,11 +122,19 @@ final class FarmingPatchOverlay extends Overlay
 				}
 				else
 				{
-					lines.add(representative.crop.getItemName() + " x" + representative.crop.getQuantity()
-						+ " (Lvl " + representative.crop.getLevel() + ")");
+					if (currentCrop != null)
+					{
+						lines.add("Plant: " + currentCrop.getName());
+						lines.add("Time remaining: " + patchTimeRemaining(timer, now));
+					}
+					else
+					{
+						lines.add(representative.crop.getItemName() + " x" + representative.crop.getQuantity()
+							+ " (Lvl " + representative.crop.getLevel() + ")");
+					}
 				}
 				boolean growing = timer != null && !timer.isDead() && !timer.isDiseased()
-					&& java.time.Instant.now().isBefore(timer.getReadyAt());
+					&& now.isBefore(timer.getReadyAt());
 				if (growing && (timer.needsCompost() || timer.needsWater()))
 				{
 					StringBuilder needs = new StringBuilder("Needs: ");
@@ -208,6 +220,31 @@ final class FarmingPatchOverlay extends Overlay
 	static boolean usesContractGroundOutline(boolean contractPatch, Crop currentCrop)
 	{
 		return contractPatch && currentCrop != null;
+	}
+
+	static String patchTimeRemaining(PatchTimer timer, Instant now)
+	{
+		if (timer == null)
+		{
+			return "Inspect patch";
+		}
+		if (timer.isDead())
+		{
+			return "DEAD";
+		}
+		if (timer.isDiseased())
+		{
+			return "DISEASED";
+		}
+		if (timer.isPicked())
+		{
+			return "PICKED";
+		}
+		if (!now.isBefore(timer.getReadyAt()))
+		{
+			return "READY";
+		}
+		return PatchTimerOverlay.formatRemaining(Duration.between(now, timer.getReadyAt()));
 	}
 
 	private Set<PatchTile> patchTiles(List<PatchObject> group)
