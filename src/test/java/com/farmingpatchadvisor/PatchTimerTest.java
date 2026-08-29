@@ -51,6 +51,15 @@ public class PatchTimerTest
 	}
 
 	@Test
+	public void treatsBushAndCactusHarvestsAsPicked()
+	{
+		assertTrue(PatchTimerManager.isPickedHarvest("Harvest", PatchType.BUSH));
+		assertTrue(PatchTimerManager.isPickedHarvest("Harvest", PatchType.CACTUS));
+		assertFalse(PatchTimerManager.isPickedHarvest("Harvest", PatchType.ALLOTMENT));
+		assertFalse(PatchTimerManager.isPickedHarvest("Clear", PatchType.BUSH));
+	}
+
+	@Test
 	public void formatsPlantedPatchTimeInsteadOfSeedQuantity()
 	{
 		Crop potato = CropCatalog.findByName(PatchType.ALLOTMENT, "Potato");

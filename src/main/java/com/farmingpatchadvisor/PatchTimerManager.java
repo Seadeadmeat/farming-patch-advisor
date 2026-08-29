@@ -171,6 +171,11 @@ final class PatchTimerManager
 			markPickedPatch(event);
 			return;
 		}
+		if (isGameObjectAction(event.getMenuAction()) && isPickedHarvest(event))
+		{
+			markPickedPatch(event);
+			return;
+		}
 		if (isCompletionOption(event.getMenuOption()) && isGameObjectAction(event.getMenuAction()))
 		{
 			removeCompletedPatch(event);
@@ -504,6 +509,22 @@ final class PatchTimerManager
 			timers.put(timer.key(), pickedTimer(timer));
 			save();
 		}
+	}
+
+	private boolean isPickedHarvest(MenuOptionClicked event)
+	{
+		if (!"Harvest".equalsIgnoreCase(event.getMenuOption()))
+		{
+			return false;
+		}
+		ObjectComposition composition = client.getObjectDefinition(event.getId());
+		if (composition.getImpostorIds() != null)
+		{
+			composition = composition.getImpostor();
+		}
+		PatchType patchType = composition == null ? null
+			: PatchClassifier.classifyGrowing(event.getId(), composition.getName());
+		return isPickedHarvest(event.getMenuOption(), patchType);
 	}
 
 	private boolean recordCareAction(MenuOptionClicked event)
@@ -982,6 +1003,12 @@ final class PatchTimerManager
 	{
 		String normalized = option == null ? "" : option.toLowerCase();
 		return normalized.startsWith("pick");
+	}
+
+	static boolean isPickedHarvest(String option, PatchType patchType)
+	{
+		return "Harvest".equalsIgnoreCase(option)
+			&& (patchType == PatchType.BUSH || patchType == PatchType.CACTUS);
 	}
 
 	private static final class CareState

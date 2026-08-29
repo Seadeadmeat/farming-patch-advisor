@@ -1,6 +1,6 @@
 # Farming Patch Advisor
 
-Plan and track efficient farm runs with patch highlights, persistent growth timers, customizable run checklists, bank and Seed Vault support, farming contract assistance, crop recommendations, protection payments, and patch-care reminders.
+All things Farming in one place: plan and track every farming patch, Farming Guild contracts, persistent timers, customizable settings, patch highlights, crop recommendations, bank and Seed Vault support, protection payments, and patch-care reminders.
 
 ## How to use
 
