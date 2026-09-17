@@ -4,6 +4,7 @@ import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.GridLayout;
+import java.awt.Rectangle;
 import java.awt.datatransfer.StringSelection;
 import java.awt.datatransfer.Transferable;
 import java.awt.datatransfer.DataFlavor;
@@ -46,8 +47,11 @@ final class FarmRouteEditor
 				boolean selected, boolean focus)
 			{
 				FarmRunPatch p = (FarmRunPatch) value;
+				int width = Math.max(170, l.getWidth() - 30);
+				String name = p.getDisplayName().replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
 				return super.getListCellRendererComponent(l,
-					(index + 1) + ". " + p.getDisplayName() + " — " + p.getPatchType().getDisplayName(),
+					"<html><body style='width:" + width + "px'>" + (index + 1) + ". " + name
+						+ " — " + p.getPatchType().getDisplayName() + "</body></html>",
 					index, selected, focus);
 			}
 		});
@@ -124,12 +128,15 @@ final class FarmRouteEditor
 		arrows.add(up); arrows.add(down); controls.add(arrows);
 		controls.add(new JLabel("Teleport for selected patch:"));
 		controls.add(teleport);
-		controls.add(new JLabel("Choose travel you have unlocked. Check daily/remaining charges."));
+		controls.add(new JLabel("Check remaining charges and daily teleport limits."));
 		JPanel editor = new JPanel(new BorderLayout(0, 8));
 		editor.add(header, BorderLayout.NORTH);
 		JScrollPane scroll = new JScrollPane(list);
 		FarmingPatchPanel.styleNarrowScrollBar(scroll);
-		scroll.setPreferredSize(new Dimension(460, 360));
+		Rectangle screen = parent.getGraphicsConfiguration().getBounds();
+		int width = Math.max(260, Math.min(420, screen.width - 120));
+		int height = Math.max(170, Math.min(320, screen.height - 320));
+		scroll.setPreferredSize(new Dimension(width, height));
 		editor.add(scroll, BorderLayout.CENTER);
 		editor.add(controls, BorderLayout.SOUTH);
 		list.setSelectedIndex(0);

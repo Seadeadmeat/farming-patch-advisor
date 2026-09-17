@@ -84,16 +84,18 @@ final class FarmingPatchPanel extends PluginPanel
 		styleRunFilter();
 		header.add(runFilter);
 		header.add(Box.createRigidArea(new Dimension(0, 12)));
-		JPanel actions = new JPanel(new GridLayout(1, 2, 8, 0));
+		JPanel actions = new JPanel(new GridLayout(1, 2, 4, 0));
 		actions.setAlignmentX(Component.LEFT_ALIGNMENT);
 		actions.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
 		actions.setOpaque(false);
 		styleButton(checklistToggle);
+		styleCompactButton(checklistToggle);
 		checklistToggle.addActionListener(event -> toggleChecklist());
 		updateChecklistButton();
 		actions.add(checklistToggle);
 		JButton clear = new JButton("Clear timers");
 		styleButton(clear);
+		styleCompactButton(clear);
 		clear.addActionListener(event -> timerManager.clear());
 		actions.add(clear);
 		header.add(actions);
@@ -350,21 +352,21 @@ final class FarmingPatchPanel extends PluginPanel
 		FarmingContract contract = contractManager.getContract();
 		if (contract == null)
 		{
-			JPanel card = createCard(66, false, ColorScheme.MEDIUM_GRAY_COLOR);
+			JPanel card = createCard(false, ColorScheme.MEDIUM_GRAY_COLOR);
 			addLine(card, "Farming Contract", new Color(255, 152, 31), true);
+			card.add(Box.createRigidArea(new Dimension(0, 3)));
 			addLine(card, "Contract unknown", Color.LIGHT_GRAY, true);
 			addLine(card, "Talk to Guildmaster Jane", Color.GRAY, false);
-			return card;
+			return finishCard(card);
 		}
 
 		Crop crop = contract.getCrop();
 		List<ProtectionPayment> payments = ProtectionPaymentCatalog.forCrop(crop);
 		PatchTimer timer = findContractTimer(crop);
 		boolean seedNeeded = contractSeedNeeded(timer);
-		int lineCount = (seedNeeded ? 5 : 4) + Math.max(1, payments.size())
-			+ (timer != null && (timer.isDead() || timer.isDiseased()) ? 1 : 0);
-		JPanel card = createCard(20 + lineCount * 17, false, ColorScheme.MEDIUM_GRAY_COLOR);
+		JPanel card = createCard(false, ColorScheme.MEDIUM_GRAY_COLOR);
 		addLine(card, "Farming Contract", new Color(255, 152, 31), true);
+		card.add(Box.createRigidArea(new Dimension(0, 3)));
 		addLine(card, "Crop: " + contract.getName(), Color.WHITE, true);
 		addLine(card, "Patch: " + crop.getPatchType().getDisplayName() + " - Farming Guild",
 			Color.LIGHT_GRAY, false);
@@ -405,7 +407,7 @@ final class FarmingPatchPanel extends PluginPanel
 				addLine(card, "Remedy: " + remedy, Color.LIGHT_GRAY, false);
 			}
 		}
-		return card;
+		return finishCard(card);
 	}
 
 	static boolean contractSeedNeeded(PatchTimer timer)
@@ -430,16 +432,13 @@ final class FarmingPatchPanel extends PluginPanel
 	{
 		JPanel header = new JPanel(new BorderLayout());
 		header.setAlignmentX(Component.LEFT_ALIGNMENT);
-		header.setPreferredSize(new Dimension(PANEL_WIDTH - 28, 30));
-		header.setMinimumSize(new Dimension(PANEL_WIDTH - 28, 30));
-		header.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
 		header.setBackground(ColorScheme.MEDIUM_GRAY_COLOR);
 		header.setBorder(BorderFactory.createEmptyBorder(6, 8, 6, 8));
-		JLabel label = new JLabel(runType.getDisplayName());
+		JLabel label = new JLabel("<html><body style='width:160px'>" + runType.getDisplayName() + "</body></html>");
 		label.setForeground(Color.WHITE);
 		label.setFont(label.getFont().deriveFont(Font.BOLD));
 		header.add(label, BorderLayout.WEST);
-		return header;
+		return finishCard(header);
 	}
 
 	private void toggleChecklist()
@@ -468,6 +467,14 @@ final class FarmingPatchPanel extends PluginPanel
 			BorderFactory.createEmptyBorder(6, 8, 6, 8)));
 	}
 
+	private static void styleCompactButton(AbstractButton button)
+	{
+		button.setFont(button.getFont().deriveFont(11f));
+		button.setBorder(BorderFactory.createCompoundBorder(
+			BorderFactory.createLineBorder(ColorScheme.BORDER_COLOR),
+			BorderFactory.createEmptyBorder(6, 4, 6, 4)));
+	}
+
 	private static List<PatchTimer> takeMatchingTimers(List<PatchTimer> timers, FarmRunPatch patch)
 	{
 		List<PatchTimer> matching = new ArrayList<>();
@@ -486,12 +493,13 @@ final class FarmingPatchPanel extends PluginPanel
 	private JPanel createUntrackedCard(int order, FarmRunPatch patch)
 	{
 		RouteTeleport teleport = routes.teleport(runFilterState.getSelected(), patch);
-		JPanel card = createCard(teleport == RouteTeleport.NONE ? 48 : 102, false, ColorScheme.MEDIUM_GRAY_COLOR);
+		JPanel card = createCard(false, ColorScheme.MEDIUM_GRAY_COLOR);
 		addLine(card, order + ". " + patch.getDisplayName(), Color.WHITE, true);
+		card.add(Box.createRigidArea(new Dimension(0, 3)));
 		addLine(card, patch.getPatchType().getDisplayName() + " - Not inspected", Color.GRAY, false);
 		addTeleportLines(card, teleport);
 		addResetMenu(card, patch);
-		return card;
+		return finishCard(card);
 	}
 
 	private JPanel createTrackedCard(int order, FarmRunPatch patch, List<PatchTimer> matchingTimers)
@@ -499,23 +507,14 @@ final class FarmingPatchPanel extends PluginPanel
 		Instant now = Instant.now();
 		Color cardStateColor = combinedStateColor(matchingTimers, now);
 		boolean attention = !Color.WHITE.equals(cardStateColor);
-		int height = 48 + matchingTimers.size() * 57;
 		RouteTeleport teleport = routes.teleport(runFilterState.getSelected(), patch);
-		if (teleport != RouteTeleport.NONE) { height += 54; }
-		for (PatchTimer timer : matchingTimers)
-		{
-			if ((!timer.isPlantedTimer() && !timer.isDead() && !timer.isDiseased())
-				|| timer.isDead() || timer.isDiseased())
-			{
-				height += 18;
-			}
-		}
-		JPanel card = createCard(height, attention, cardStateColor);
+		JPanel card = createCard(attention, cardStateColor);
 		addLine(card, order + ". " + patch.getDisplayName(), cardStateColor, true);
-		addTeleportLines(card, teleport);
+		card.add(Box.createRigidArea(new Dimension(0, 3)));
 		addLine(card, "Patch: " + patch.getPatchType().getDisplayName()
 			+ (patch.getPatchCount() > 1 ? " (" + matchingTimers.size() + "/" + patch.getPatchCount() + " tracked)" : ""),
 			Color.LIGHT_GRAY, false);
+		addTeleportLines(card, teleport);
 		int timerNumber = 1;
 		for (PatchTimer timer : matchingTimers)
 		{
@@ -541,18 +540,14 @@ final class FarmingPatchPanel extends PluginPanel
 			}
 		}
 		addResetMenu(card, patch);
-		return card;
+		return finishCard(card);
 	}
 
 	private static void addTeleportLines(JPanel card, RouteTeleport teleport)
 	{
 		if (teleport != RouteTeleport.NONE)
 		{
-			addLine(card, "Teleport:", Color.LIGHT_GRAY, false);
-			JLabel label = new JLabel("<html><body style='width:170px'>" + teleport + "</body></html>");
-			label.setForeground(Color.LIGHT_GRAY);
-			label.setAlignmentX(Component.LEFT_ALIGNMENT);
-			card.add(label);
+			addLine(card, "Teleport: " + teleport, Color.LIGHT_GRAY, false);
 		}
 	}
 
@@ -594,14 +589,13 @@ final class FarmingPatchPanel extends PluginPanel
 		}
 	}
 
-	private static JPanel createCard(int height, boolean ready, Color readyColor)
+	private static JPanel createCard(boolean ready, Color readyColor)
 	{
 		JPanel card = new JPanel();
 		card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
 		card.setAlignmentX(Component.LEFT_ALIGNMENT);
-		card.setPreferredSize(new Dimension(PANEL_WIDTH - 28, height));
-		card.setMinimumSize(new Dimension(PANEL_WIDTH - 28, height));
-		card.setMaximumSize(new Dimension(Integer.MAX_VALUE, height));
+		card.setMinimumSize(new Dimension(PANEL_WIDTH - 28, 0));
+		card.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
 		card.setBackground(ColorScheme.DARKER_GRAY_COLOR);
 		card.setBorder(BorderFactory.createCompoundBorder(
 			BorderFactory.createLineBorder(ready ? readyColor : ColorScheme.BORDER_COLOR),
@@ -609,9 +603,19 @@ final class FarmingPatchPanel extends PluginPanel
 		return card;
 	}
 
+	private static JPanel finishCard(JPanel card)
+	{
+		int height = card.getPreferredSize().height;
+		card.setPreferredSize(new Dimension(PANEL_WIDTH - 28, height));
+		card.setMinimumSize(new Dimension(PANEL_WIDTH - 28, height));
+		card.setMaximumSize(new Dimension(Integer.MAX_VALUE, height));
+		return card;
+	}
+
 	private static void addLine(JPanel card, String text, Color color, boolean bold)
 	{
-		JLabel label = new JLabel(text);
+		String escaped = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
+		JLabel label = new JLabel("<html><body style='width:170px'>" + escaped + "</body></html>");
 		label.setAlignmentX(Component.LEFT_ALIGNMENT);
 		label.setHorizontalAlignment(JLabel.LEFT);
 		label.setForeground(color);

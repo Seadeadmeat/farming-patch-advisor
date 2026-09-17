@@ -1,5 +1,13 @@
 # Version history
 
+## V1.2 — 2026-09-17
+
+- Sidebar patch and contract cards now grow to fit wrapped text instead of relying
+  on fixed heights, including long names, payment details, timers, and teleports.
+- Compact header buttons fit the RuneLite sidebar; the route editor adapts its
+  scroll area to the available screen and wraps long stop names.
+- Local visual polish pending in-game confirmation.
+
 ## V1.1 — 2026-09-17
 
 - Added a Route & Teleports editor with drag ordering, up/down controls, default
