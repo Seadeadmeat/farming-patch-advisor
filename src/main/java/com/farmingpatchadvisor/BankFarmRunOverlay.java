@@ -67,16 +67,20 @@ final class BankFarmRunOverlay extends OverlayPanel
 			config.checklistPayments());
 		List<FarmingLoadout.ChecklistItem> runIncomplete = incomplete(runChecklist);
 		List<FarmingLoadout.ChecklistItem> contractIncomplete = incomplete(contractChecklist);
+		List<FarmingLoadout.ChecklistItem> teleports = seedVaultOpen
+			? java.util.Collections.emptyList() : farmingLoadout.teleportChecklist();
 
 		// Always reserve room for every contract item before truncating the normal farm-run list.
 		int contractDisplayed = Math.min(MAX_ITEMS, contractIncomplete.size());
 		int runDisplayed = Math.min(runIncomplete.size(), MAX_ITEMS - contractDisplayed);
 		int renderedRows = sectionRows(runIncomplete, runDisplayed)
-			+ (contractChecklist.isEmpty() ? 0 : sectionRows(contractIncomplete, contractDisplayed));
+			+ (contractChecklist.isEmpty() ? 0 : sectionRows(contractIncomplete, contractDisplayed))
+			+ (teleports.isEmpty() ? 0 : sectionRows(teleports, teleports.size()));
 		positionNextTo(storage.getBounds(), renderedRows);
 		panelComponent.getChildren().add(TitleComponent.builder()
 			.text(seedVaultOpen ? "Farm Run Seed List" : "Farm Run Bank List").build());
 		renderSection("Farm Run Items", runIncomplete, runDisplayed, "[x] Farm run ready");
+		if (!teleports.isEmpty()) { renderSection("Teleports", teleports, teleports.size(), "[x] Teleports ready"); }
 		if (!contractChecklist.isEmpty())
 		{
 			renderSection("Farming Contract", contractIncomplete, contractDisplayed,
@@ -122,11 +126,12 @@ final class BankFarmRunOverlay extends OverlayPanel
 		for (int i = 0; i < displayed; i++)
 		{
 			FarmingLoadout.ChecklistItem item = items.get(i);
+			boolean complete = item.getOwned() >= item.getNeeded();
 			panelComponent.getChildren().add(LineComponent.builder()
-				.left("[ ] " + item.getName())
-				.right(item.getOwned() + "/" + item.getNeeded())
-				.leftColor(item.isSeed() ? config.seedColor() : config.requiredItemColor())
-				.rightColor(Color.RED)
+				.left((complete ? "[x] " : "[ ] ") + item.getName())
+				.right(item.amount())
+				.leftColor(complete ? Color.GREEN : item.isSeed() ? config.seedColor() : config.requiredItemColor())
+				.rightColor(complete ? Color.GREEN : Color.RED)
 				.build());
 		}
 		if (items.size() > displayed)

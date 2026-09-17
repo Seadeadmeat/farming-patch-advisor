@@ -63,6 +63,7 @@ final class FarmingItemOverlay extends WidgetItemOverlay
 
 	private boolean isRequiredItem(int itemId)
 	{
+		if (RouteTeleport.isTeleportItem(itemId) && farmingLoadout.teleportItemIds().contains(itemId)) { return true; }
 		if (farmingLoadout.isRemedyItem(ItemVariationMapping.map(itemId)))
 		{
 			return true;

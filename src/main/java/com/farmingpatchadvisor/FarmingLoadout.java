@@ -26,6 +26,7 @@ final class FarmingLoadout
 	private final FarmingContractManager contractManager;
 	private final Provider<PatchTimerManager> timerManagerProvider;
 	private final FarmRunFilterState runFilterState;
+	private final FarmRouteManager routes;
 	private final Map<Integer, Integer> bankItems = new HashMap<>();
 	private final Map<Integer, Integer> inventoryItems = new HashMap<>();
 	private final Map<Integer, Integer> equipmentItems = new HashMap<>();
@@ -41,13 +42,14 @@ final class FarmingLoadout
 	@Inject
 	private FarmingLoadout(FarmingPatchAdvisorPlugin plugin, FarmingPatchAdvisorConfig config,
 		FarmingContractManager contractManager, Provider<PatchTimerManager> timerManagerProvider,
-		FarmRunFilterState runFilterState)
+		FarmRunFilterState runFilterState, FarmRouteManager routes)
 	{
 		this.plugin = plugin;
 		this.config = config;
 		this.contractManager = contractManager;
 		this.timerManagerProvider = timerManagerProvider;
 		this.runFilterState = runFilterState;
+		this.routes = routes;
 	}
 
 	synchronized void onItemContainerChanged(ItemContainerChanged event)
@@ -299,6 +301,7 @@ final class FarmingLoadout
 			}
 		}
 		addContractItemIds(itemIds, includePayments);
+		itemIds.addAll(teleportItemIds());
 		addRequiredItemIds(itemIds, includeCompost, includeTools);
 		for (int remedyItemId : remedyItemIds())
 		{
@@ -334,6 +337,35 @@ final class FarmingLoadout
 				? ItemID.FAIRY_ENCHANTED_SECATEURS : ItemID.SECATEURS);
 		}
 		return itemIds;
+	}
+
+	synchronized List<ChecklistItem> teleportChecklist()
+	{
+		List<ChecklistItem> result = new ArrayList<>();
+		for (Map.Entry<RouteTeleport, Integer> entry : routes.requirements().entrySet())
+		{
+			int owned = 0;
+			boolean equipped = false;
+			for (int id : entry.getKey().itemIds())
+			{
+				owned += inventoryCount(id) + equipmentItems.getOrDefault(id, 0);
+				equipped |= equipmentItems.getOrDefault(id, 0) > 0;
+			}
+			ChecklistItem item = new ChecklistItem(entry.getKey().toString(), owned, entry.getValue(), false);
+			item.equipped = equipped;
+			result.add(item);
+		}
+		return result;
+	}
+
+	synchronized Set<Integer> teleportItemIds()
+	{
+		Set<Integer> ids = new HashSet<>();
+		for (RouteTeleport teleport : routes.requirements().keySet())
+		{
+			for (int id : teleport.itemIds()) { ids.add(id); }
+		}
+		return ids;
 	}
 
 	synchronized boolean isRemedyItem(int itemId)
@@ -778,6 +810,7 @@ final class FarmingLoadout
 		private final int owned;
 		private final int needed;
 		private final boolean seed;
+		private boolean equipped;
 
 		private ChecklistItem(String name, int owned, int needed, boolean seed)
 		{
@@ -791,6 +824,7 @@ final class FarmingLoadout
 		int getOwned() { return owned; }
 		int getNeeded() { return needed; }
 		boolean isSeed() { return seed; }
+		String amount() { return equipped && owned >= needed ? "Equipped" : owned + "/" + needed; }
 	}
 
 	private static final class PaymentTotal

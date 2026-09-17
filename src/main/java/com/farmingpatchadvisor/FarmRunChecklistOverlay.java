@@ -45,10 +45,17 @@ final class FarmRunChecklistOverlay extends OverlayPanel
 		FontMetrics metrics = graphics.getFontMetrics();
 		int contentWidth = metrics.stringWidth("Farm Run Checklist");
 		panelComponent.getChildren().add(TitleComponent.builder().text("Farm Run Checklist").build());
+		int teleportStart = checklist.size();
+		checklist.addAll(farmingLoadout.teleportChecklist());
+		int index = 0;
 		for (FarmingLoadout.ChecklistItem item : checklist)
 		{
+			if (index++ == teleportStart)
+			{
+				panelComponent.getChildren().add(LineComponent.builder().left("Teleports").leftColor(Color.ORANGE).build());
+			}
 			boolean complete = item.getOwned() >= item.getNeeded();
-			String amount = item.getOwned() + "/" + item.getNeeded();
+			String amount = item.amount();
 			String label = (complete ? "[x] " : "[ ] ") + item.getName();
 			contentWidth = Math.max(contentWidth, metrics.stringWidth(label) + metrics.stringWidth(amount) + 18);
 			panelComponent.getChildren().add(LineComponent.builder()

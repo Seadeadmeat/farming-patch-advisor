@@ -38,11 +38,12 @@ final class FarmingPatchOverlay extends Overlay
 	private final FarmingContractManager contractManager;
 	private final PatchTimerManager timerManager;
 	private final FarmRunFilterState runFilterState;
+	private final FarmRouteManager routes;
 
 	@Inject
 	private FarmingPatchOverlay(Client client, FarmingPatchAdvisorPlugin plugin, FarmingPatchAdvisorConfig config,
 		FarmingLoadout farmingLoadout, FarmingContractManager contractManager,
-		PatchTimerManager timerManager, FarmRunFilterState runFilterState)
+		PatchTimerManager timerManager, FarmRunFilterState runFilterState, FarmRouteManager routes)
 	{
 		this.client = client;
 		this.plugin = plugin;
@@ -51,6 +52,7 @@ final class FarmingPatchOverlay extends Overlay
 		this.contractManager = contractManager;
 		this.timerManager = timerManager;
 		this.runFilterState = runFilterState;
+		this.routes = routes;
 		setPosition(OverlayPosition.DYNAMIC);
 		setLayer(OverlayLayer.ABOVE_SCENE);
 		setPriority(PRIORITY_LOW);
@@ -65,6 +67,7 @@ final class FarmingPatchOverlay extends Overlay
 		}
 
 		Set<ChecklistPatch> selectedPatches = ChecklistPatch.selected(config);
+		List<FarmRunPatch> route = routes.activePatches();
 		// Share recommendations within this frame, while refreshing on the next frame
 		// so inventory, settings and character changes cannot leave stale results.
 		EnumMap<PatchType, Crop> recommendations = new EnumMap<>(PatchType.class);
@@ -122,6 +125,16 @@ final class FarmingPatchOverlay extends Overlay
 
 				Rectangle bounds = patchArea.getBounds();
 				List<String> lines = new ArrayList<>();
+				String location = PatchLocationCatalog.name(representative.object.getWorldLocation());
+				for (int i = 0; i < route.size(); i++)
+				{
+					if (route.get(i).getLocation().equals(location)
+						&& route.get(i).getPatchType() == representative.patchType)
+					{
+						lines.add("Patch #" + (i + 1));
+						break;
+					}
+				}
 				if (clearForContract)
 				{
 					lines.add("Clear patch for contract");

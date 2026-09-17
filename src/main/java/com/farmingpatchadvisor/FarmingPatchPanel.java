@@ -46,6 +46,7 @@ final class FarmingPatchPanel extends PluginPanel
 	private final FarmingContractManager contractManager;
 	private final FarmingLoadout farmingLoadout;
 	private final FarmRunFilterState runFilterState;
+	private final FarmRouteManager routes;
 	private final JComboBox<FarmRunFilter> runFilter = new JComboBox<>(FarmRunFilter.values());
 	private final JToggleButton checklistToggle = new JToggleButton();
 	private final JPanel patches = new JPanel();
@@ -56,7 +57,7 @@ final class FarmingPatchPanel extends PluginPanel
 	@Inject
 	private FarmingPatchPanel(PatchTimerManager timerManager, FarmingPatchAdvisorConfig config,
 		ConfigManager configManager, FarmingContractManager contractManager, FarmingLoadout farmingLoadout,
-		FarmRunFilterState runFilterState)
+		FarmRunFilterState runFilterState, FarmRouteManager routes)
 	{
 		super(false);
 		this.timerManager = timerManager;
@@ -65,6 +66,7 @@ final class FarmingPatchPanel extends PluginPanel
 		this.contractManager = contractManager;
 		this.farmingLoadout = farmingLoadout;
 		this.runFilterState = runFilterState;
+		this.routes = routes;
 		setLayout(new BorderLayout());
 		setBackground(ColorScheme.DARK_GRAY_COLOR);
 		setBorder(BorderFactory.createLineBorder(ColorScheme.BORDER_COLOR));
@@ -95,6 +97,17 @@ final class FarmingPatchPanel extends PluginPanel
 		clear.addActionListener(event -> timerManager.clear());
 		actions.add(clear);
 		header.add(actions);
+		JButton editRoute = new JButton("Route & Teleports");
+		styleButton(editRoute);
+		editRoute.setAlignmentX(Component.LEFT_ALIGNMENT);
+		editRoute.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
+		editRoute.addActionListener(event ->
+		{
+			FarmRouteEditor.open(this, routes, runFilterState.getSelected());
+			rebuild();
+		});
+		header.add(Box.createRigidArea(new Dimension(0, 8)));
+		header.add(editRoute);
 		add(header, BorderLayout.NORTH);
 
 		patches.setLayout(new BoxLayout(patches, BoxLayout.Y_AXIS));
@@ -141,6 +154,19 @@ final class FarmingPatchPanel extends PluginPanel
 		int order = 1;
 		List<FarmRunPatch> enabledCatalog = FarmRunCatalog.patches(config);
 		updateRunFilterOptions(enabledCatalog, selectedPatches);
+		if (routes.isCustom(runFilterState.getSelected()))
+		{
+			for (FarmRunPatch patch : routes.activePatches())
+			{
+				List<PatchTimer> matching = takeMatchingTimers(unmatchedTimers, patch);
+				patches.add(matching.isEmpty() ? createUntrackedCard(order++, patch)
+					: createTrackedCard(order++, patch, matching));
+				patches.add(Box.createRigidArea(new Dimension(0, 5)));
+			}
+			patches.revalidate();
+			patches.repaint();
+			return;
+		}
 		for (FarmRunType runType : FarmRunType.values())
 		{
 			FarmRunFilter selectedRunFilter = (FarmRunFilter) runFilter.getSelectedItem();
@@ -311,7 +337,7 @@ final class FarmingPatchPanel extends PluginPanel
 		return null;
 	}
 
-	private static void styleNarrowScrollBar(JScrollPane scrollPane)
+	static void styleNarrowScrollBar(JScrollPane scrollPane)
 	{
 		scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
 		scrollPane.getVerticalScrollBar().setUI(new NarrowScrollBarUI());
@@ -459,9 +485,11 @@ final class FarmingPatchPanel extends PluginPanel
 
 	private JPanel createUntrackedCard(int order, FarmRunPatch patch)
 	{
-		JPanel card = createCard(48, false, ColorScheme.MEDIUM_GRAY_COLOR);
+		RouteTeleport teleport = routes.teleport(runFilterState.getSelected(), patch);
+		JPanel card = createCard(teleport == RouteTeleport.NONE ? 48 : 102, false, ColorScheme.MEDIUM_GRAY_COLOR);
 		addLine(card, order + ". " + patch.getDisplayName(), Color.WHITE, true);
 		addLine(card, patch.getPatchType().getDisplayName() + " - Not inspected", Color.GRAY, false);
+		addTeleportLines(card, teleport);
 		addResetMenu(card, patch);
 		return card;
 	}
@@ -472,6 +500,8 @@ final class FarmingPatchPanel extends PluginPanel
 		Color cardStateColor = combinedStateColor(matchingTimers, now);
 		boolean attention = !Color.WHITE.equals(cardStateColor);
 		int height = 48 + matchingTimers.size() * 57;
+		RouteTeleport teleport = routes.teleport(runFilterState.getSelected(), patch);
+		if (teleport != RouteTeleport.NONE) { height += 54; }
 		for (PatchTimer timer : matchingTimers)
 		{
 			if ((!timer.isPlantedTimer() && !timer.isDead() && !timer.isDiseased())
@@ -482,6 +512,7 @@ final class FarmingPatchPanel extends PluginPanel
 		}
 		JPanel card = createCard(height, attention, cardStateColor);
 		addLine(card, order + ". " + patch.getDisplayName(), cardStateColor, true);
+		addTeleportLines(card, teleport);
 		addLine(card, "Patch: " + patch.getPatchType().getDisplayName()
 			+ (patch.getPatchCount() > 1 ? " (" + matchingTimers.size() + "/" + patch.getPatchCount() + " tracked)" : ""),
 			Color.LIGHT_GRAY, false);
@@ -511,6 +542,18 @@ final class FarmingPatchPanel extends PluginPanel
 		}
 		addResetMenu(card, patch);
 		return card;
+	}
+
+	private static void addTeleportLines(JPanel card, RouteTeleport teleport)
+	{
+		if (teleport != RouteTeleport.NONE)
+		{
+			addLine(card, "Teleport:", Color.LIGHT_GRAY, false);
+			JLabel label = new JLabel("<html><body style='width:170px'>" + teleport + "</body></html>");
+			label.setForeground(Color.LIGHT_GRAY);
+			label.setAlignmentX(Component.LEFT_ALIGNMENT);
+			card.add(label);
+		}
 	}
 
 	private static Color combinedStateColor(List<PatchTimer> timers, Instant now)

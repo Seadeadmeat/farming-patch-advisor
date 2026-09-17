@@ -1,6 +1,23 @@
 # Farming Patch Advisor
 
-Current version: **V1.0**. See [version history](CHANGELOG.md).
+Current version: **V1.1**. See [version history](CHANGELOG.md).
+
+### Custom routes and teleports
+
+Choose your run in **Farm Run**, then open **Route & Teleports**. Select a patch
+and choose its teleport. Drag stops or use **Move up / Move down**, then **Save route**.
+Choose **Default** to reset the order, or **Cancel** to discard edits.
+Orders and teleport choices are saved separately for each character and run selection.
+Only enabled patches and locations appear. Custom order controls panel and ground-label
+patch numbers, including combined runs.
+
+Chosen supplies appear under **Teleports** in the main and bank checklists and are
+included in **Farm Run Filter**. Equipped teleport items count as carried. The Seed
+Vault checklist stays seed-focused. Choose **None / no item needed** for walking,
+portals, or travel you do not want included. Tablet choices require the actual tablets,
+not spell runes. Charged jewellery accepts its charged variants; check remaining charges
+and daily teleport limits yourself. Reusable items count once, while consumables count
+once per visit (consecutive patches at the same location with the same teleport share a visit).
 
 All things Farming in one place: plan and track every farming patch, Farming Guild contracts, persistent timers, customizable settings, patch highlights, crop recommendations, bank and Seed Vault support, protection payments, and patch-care reminders.
 
