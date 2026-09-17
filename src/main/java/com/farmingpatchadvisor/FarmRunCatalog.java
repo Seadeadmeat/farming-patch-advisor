@@ -2,6 +2,8 @@ package com.farmingpatchadvisor;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -9,6 +11,7 @@ import java.util.Map;
 final class FarmRunCatalog
 {
 	private static final List<FarmRunPatch> PATCHES = build();
+	private static final Map<String, EnumSet<PatchType>> PATCH_TYPES = indexPatchTypes();
 
 	private FarmRunCatalog()
 	{
@@ -34,14 +37,19 @@ final class FarmRunCatalog
 
 	static boolean hasPatch(String location, PatchType patchType)
 	{
+		EnumSet<PatchType> types = PATCH_TYPES.get(location);
+		return types != null && types.contains(patchType);
+	}
+
+	private static Map<String, EnumSet<PatchType>> indexPatchTypes()
+	{
+		Map<String, EnumSet<PatchType>> index = new HashMap<>();
 		for (FarmRunPatch patch : PATCHES)
 		{
-			if (patch.getLocation().equals(location) && patch.getPatchType() == patchType)
-			{
-				return true;
-			}
+			index.computeIfAbsent(patch.getLocation(), key -> EnumSet.noneOf(PatchType.class))
+				.add(patch.getPatchType());
 		}
-		return false;
+		return Collections.unmodifiableMap(index);
 	}
 
 	private static List<FarmRunPatch> build()

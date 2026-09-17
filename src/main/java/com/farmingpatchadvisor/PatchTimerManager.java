@@ -44,6 +44,7 @@ final class PatchTimerManager
 	private final Map<String, PatchTimer> timers = new LinkedHashMap<>();
 	private final Map<String, CareState> pendingCare = new LinkedHashMap<>();
 	private final Map<String, PendingCareAction> pendingCareActions = new LinkedHashMap<>();
+	private final Map<String, PendingHarvest> pendingHarvests = new LinkedHashMap<>();
 	private Inspection inspection;
 
 	@Inject
@@ -117,6 +118,7 @@ final class PatchTimerManager
 		timers.clear();
 		pendingCare.clear();
 		pendingCareActions.clear();
+		pendingHarvests.clear();
 		inspection = null;
 	}
 
@@ -234,6 +236,7 @@ final class PatchTimerManager
 		if (nearby != null)
 		{
 			timers.remove(nearby.key());
+			pendingHarvests.remove(nearby.key());
 		}
 		Instant plantedAt = Instant.now();
 		CareState care = pendingCare.remove(timerKey(anchor, patchType));
@@ -343,6 +346,33 @@ final class PatchTimerManager
 		{
 			return;
 		}
+		PendingHarvest harvest = pendingHarvests.get(existing.key());
+		if (harvest != null && composition != null
+			&& composition.getId() != harvest.objectStateId)
+		{
+			if (isEmptyPatchState(name, actions))
+			{
+				timers.remove(existing.key());
+				pendingHarvests.remove(existing.key());
+				save();
+				return;
+			}
+			if (harvest.picked && !hasExplicitDeadName(name) && !diseased
+				&& containsAction(actions, "Inspect")
+				&& !hasHarvestAction(actions))
+			{
+				timers.put(existing.key(), pickedTimer(existing));
+				pendingHarvests.remove(existing.key());
+				save();
+				return;
+			}
+		}
+		// A partially harvested bush/cactus can expose Clear while produce remains.
+		if (harvest != null && harvest.picked && hasHarvestAction(actions)
+			&& !hasExplicitDeadName(name))
+		{
+			dead = false;
+		}
 		PendingCareAction pending = pendingCareActions.get(existing.key());
 		if (pending != null && pending.watered
 			&& (watered || composition != null && composition.getId() != pending.objectStateId))
@@ -379,6 +409,7 @@ final class PatchTimerManager
 	synchronized void clear()
 	{
 		timers.clear();
+		pendingHarvests.clear();
 		save();
 	}
 
@@ -386,6 +417,7 @@ final class PatchTimerManager
 	{
 		timers.values().removeIf(timer -> timer.getPatchType() == patchType
 			&& PatchLocationCatalog.name(timer.getPatchLocation()).equals(locationName));
+		pendingHarvests.keySet().retainAll(timers.keySet());
 		save();
 	}
 
@@ -480,8 +512,7 @@ final class PatchTimerManager
 		PatchTimer timer = findSamePatch(clicked, patchType, COMPLETION_DISTANCE);
 		if (timer != null)
 		{
-			timers.remove(timer.key());
-			save();
+			pendingHarvests.putIfAbsent(timer.key(), new PendingHarvest(composition.getId(), false));
 		}
 	}
 
@@ -506,8 +537,7 @@ final class PatchTimerManager
 		PatchTimer timer = findSamePatch(clicked, patchType, COMPLETION_DISTANCE);
 		if (timer != null)
 		{
-			timers.put(timer.key(), pickedTimer(timer));
-			save();
+			pendingHarvests.putIfAbsent(timer.key(), new PendingHarvest(composition.getId(), true));
 		}
 	}
 
@@ -816,6 +846,41 @@ final class PatchTimerManager
 		String normalized = name == null ? "" : name.toLowerCase();
 		return normalized.contains("dead") || containsAction(actions, "Clear")
 			&& !normalized.contains("stump");
+	}
+
+	static boolean hasHarvestAction(String[] actions)
+	{
+		if (actions != null)
+		{
+			for (String action : actions)
+			{
+				if ("Harvest".equalsIgnoreCase(action) || isPickedOption(action))
+				{
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	static boolean isEmptyPatchState(String name, String[] actions)
+	{
+		return PatchClassifier.classify(name) != null
+			&& !hasHarvestAction(actions) && !isDeadObjectState(name, actions)
+			&& !isDiseasedObjectState(name, actions)
+			&& CropCatalog.findInAnyText(name) == null;
+	}
+
+	private static final class PendingHarvest
+	{
+		private final int objectStateId;
+		private final boolean picked;
+
+		private PendingHarvest(int objectStateId, boolean picked)
+		{
+			this.objectStateId = objectStateId;
+			this.picked = picked;
+		}
 	}
 
 	private static boolean hasExplicitDeadName(String name)

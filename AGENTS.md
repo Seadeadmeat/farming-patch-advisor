@@ -1,5 +1,15 @@
 # RuneLite Plugin Development — Agent Guidelines
 
+## Versioning
+
+- User established the current local baseline as V1.0 on 2026-09-17.
+- Number subsequent updates V1.1, V1.2, V1.3, and so on, once per update batch
+  rather than once per edit or test. Continue with V1.10 after V1.9.
+- Keep build.gradle, runelite-plugin.properties, README.md, and CHANGELOG.md in sync.
+- Teleport checklist/custom route ordering is a preview only; if implemented as the
+  next update, it belongs to V1.1.
+- Keep updates local until the user explicitly requests publishing to GitHub/Plugin Hub.
+
 ## Logging
 
 - Use `log.debug()` for developer/diagnostic logging.

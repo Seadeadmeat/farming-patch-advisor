@@ -34,21 +34,22 @@ final class FarmingItemOverlay extends WidgetItemOverlay
 	@Override
 	public void renderItemOverlay(Graphics2D graphics, int itemId, WidgetItem widgetItem)
 	{
-		int canonicalItemId = ItemVariationMapping.map(itemId);
 		boolean seedVaultItem = isSeedVaultItem(widgetItem);
+		boolean bankItem = isBankItem(widgetItem);
+		if ((!config.highlightBank() && bankItem)
+			|| (!config.highlightSeedVault() && seedVaultItem)
+			|| (!config.highlightInventory() && !bankItem && !seedVaultItem))
+		{
+			return;
+		}
+
+		int canonicalItemId = ItemVariationMapping.map(itemId);
 		Crop crop = (seedVaultItem
 			? farmingLoadout.bestAvailableInSeedVaultByItemId()
 			: farmingLoadout.bestAvailableByItemId()).get(itemId);
 		boolean requiredItem = isRequiredItem(itemId)
 			|| (canonicalItemId != itemId && isProtectionPayment(canonicalItemId));
 		if (crop == null && !requiredItem)
-		{
-			return;
-		}
-
-		if ((!config.highlightBank() && isBankItem(widgetItem))
-			|| (!config.highlightSeedVault() && seedVaultItem)
-			|| (!config.highlightInventory() && !isBankItem(widgetItem) && !seedVaultItem))
 		{
 			return;
 		}

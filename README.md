@@ -1,5 +1,7 @@
 # Farming Patch Advisor
 
+Current version: **V1.0**. See [version history](CHANGELOG.md).
+
 All things Farming in one place: plan and track every farming patch, Farming Guild contracts, persistent timers, customizable settings, patch highlights, crop recommendations, bank and Seed Vault support, protection payments, and patch-care reminders.
 
 ## How to use

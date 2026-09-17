@@ -3,6 +3,7 @@ package com.farmingpatchadvisor;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import net.runelite.api.gameval.ItemID;
@@ -10,6 +11,7 @@ import net.runelite.api.gameval.ItemID;
 final class CropCatalog
 {
 	private static final Map<PatchType, List<Crop>> CROPS = buildCatalog();
+	private static final Map<Integer, Crop> CROPS_BY_ITEM = indexByItem();
 
 	private CropCatalog()
 	{
@@ -50,17 +52,20 @@ final class CropCatalog
 
 	static Crop findByItemId(int itemId)
 	{
+		return CROPS_BY_ITEM.get(itemId);
+	}
+
+	private static Map<Integer, Crop> indexByItem()
+	{
+		Map<Integer, Crop> index = new HashMap<>();
 		for (List<Crop> crops : CROPS.values())
 		{
 			for (Crop crop : crops)
 			{
-				if (crop.getItemId() == itemId)
-				{
-					return crop;
-				}
+				index.putIfAbsent(crop.getItemId(), crop);
 			}
 		}
-		return null;
+		return Collections.unmodifiableMap(index);
 	}
 
 	static Crop findByName(PatchType patchType, String name)

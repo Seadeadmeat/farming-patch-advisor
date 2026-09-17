@@ -11,6 +11,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -64,6 +65,9 @@ final class FarmingPatchOverlay extends Overlay
 		}
 
 		Set<ChecklistPatch> selectedPatches = ChecklistPatch.selected(config);
+		// Share recommendations within this frame, while refreshing on the next frame
+		// so inventory, settings and character changes cannot leave stale results.
+		EnumMap<PatchType, Crop> recommendations = new EnumMap<>(PatchType.class);
 		List<PatchObject> remaining = new ArrayList<>();
 		for (GameObject object : plugin.getPatchObjects())
 		{
@@ -78,8 +82,12 @@ final class FarmingPatchOverlay extends Overlay
 				continue;
 			}
 			Crop contractCrop = contractCrop(object, patchType);
+			if (contractCrop == null && !recommendations.containsKey(patchType))
+			{
+				recommendations.put(patchType, farmingLoadout.recommendedCrop(patchType));
+			}
 			Crop crop = contractCrop != null ? contractCrop
-				: patchType == null ? null : farmingLoadout.recommendedCrop(patchType);
+				: recommendations.get(patchType);
 			if (crop == null)
 			{
 				continue;

@@ -309,7 +309,11 @@ public class FarmingPatchAdvisorPlugin extends Plugin
 		boolean farmingState = PatchClassifier.hasAction(composition, "Inspect");
 		if (patchType == null && farmingState)
 		{
-			PatchTimer timer = timerManager.findTimer(object.getWorldLocation(), 4);
+			// Only inherit a timer from the same patch footprint. The herb and flower
+			// patches at standard farming sites are close enough that a wider lookup
+			// can classify the flower patch as herb when its live object has a generic
+			// name such as "Farming patch".
+			PatchTimer timer = timerManager.findTimer(object.getWorldLocation(), 1);
 			patchType = timer == null ? null : timer.getPatchType();
 		}
 		String location = PatchLocationCatalog.name(object.getWorldLocation());

@@ -14,6 +14,24 @@ import static org.junit.Assert.assertTrue;
 public class PatchTimerTest
 {
 	@Test
+	public void harvestingRequiresAnEmptyPatchState()
+	{
+		assertFalse(PatchTimerManager.isEmptyPatchState("Herbs",
+			new String[]{"Harvest", "Inspect", "Guide"}));
+		assertFalse(PatchTimerManager.isEmptyPatchState("Herb patch",
+			new String[]{"Harvest", "Inspect", "Guide"}));
+		assertTrue(PatchTimerManager.isEmptyPatchState("Herb patch",
+			new String[]{"Inspect", "Guide"}));
+		assertTrue(PatchTimerManager.isEmptyPatchState("Allotment",
+			new String[]{"Rake", "Inspect", "Guide"}));
+		assertFalse(PatchTimerManager.isEmptyPatchState("Dead herbs",
+			new String[]{"Clear", "Inspect", "Guide"}));
+		assertTrue(PatchTimerManager.hasHarvestAction(new String[]{"Pick-banana", "Inspect"}));
+		assertTrue(PatchTimerManager.hasHarvestAction(new String[]{"Harvest", "Inspect"}));
+		assertFalse(PatchTimerManager.hasHarvestAction(new String[]{"Inspect", "Clear", null}));
+	}
+
+	@Test
 	public void usesConsistentTimerStateColors()
 	{
 		Crop potato = CropCatalog.findByName(PatchType.ALLOTMENT, "Potato");
