@@ -30,4 +30,25 @@ public class CropGrowthTimesTest
 		Crop potato = CropCatalog.recommend(PatchType.ALLOTMENT, 1);
 		assertEquals(Duration.ofMinutes(10), CropGrowthTimes.stageDuration(potato, 5));
 	}
+
+	@Test
+	public void hardwoodTimersUseTheCorrectNumberOfGrowthCycles()
+	{
+		String[] names = {"Teak sapling", "Mahogany sapling", "Camphor sapling",
+			"Ironwood sapling", "Rosewood sapling"};
+		int[] stages = {8, 9, 9, 9, 10};
+		for (int i = 0; i < names.length; i++)
+		{
+			Crop crop = CropCatalog.findByName(PatchType.HARDWOOD_TREE, names[i]);
+			Duration fullGrowth = Duration.ofMinutes((stages[i] - 1) * 640L);
+			assertEquals(names[i], fullGrowth, CropGrowthTimes.forCrop(crop));
+			assertEquals(names[i], Duration.ofMinutes(640), CropGrowthTimes.stageDuration(crop, stages[i]));
+			assertEquals(names[i], fullGrowth,
+				CropGrowthTimes.maximumRemainingAtStage(crop, 1, stages[i]));
+			assertEquals(names[i], fullGrowth.minusMinutes(640),
+				CropGrowthTimes.maximumRemainingAtStage(crop, 2, stages[i]));
+			assertEquals(names[i], Duration.ZERO,
+				CropGrowthTimes.maximumRemainingAtStage(crop, stages[i], stages[i]));
+		}
+	}
 }

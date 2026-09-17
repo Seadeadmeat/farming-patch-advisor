@@ -78,11 +78,12 @@ final class CropGrowthTimes
 			case "Palm sapling":
 			case "Dragonfruit sapling": minutes = 960; break;
 
-			case "Teak sapling": minutes = 5120; break;
+			// Hardwood growth is one 640-minute tick per stage transition.
+			case "Teak sapling": minutes = 4480; break;
 			case "Mahogany sapling":
 			case "Camphor sapling":
-			case "Ironwood sapling": minutes = 5760; break;
-			case "Rosewood sapling": minutes = 6400; break;
+			case "Ironwood sapling": minutes = 5120; break;
+			case "Rosewood sapling": minutes = 5760; break;
 
 			case "Cactus": minutes = 560; break;
 			case "Potato cactus": minutes = 70; break;

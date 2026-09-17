@@ -9,10 +9,44 @@ import net.runelite.api.Point;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
 public class PatchTimerTest
 {
+	@Test
+	public void correctsPersistedHardwoodTimersWithoutChangingOtherEstimates()
+	{
+		Instant observed = Instant.parse("2026-09-17T00:00:00Z");
+		WorldPoint patch = new WorldPoint(1, 2, 0);
+		String[] names = {"Teak sapling", "Mahogany sapling", "Camphor sapling",
+			"Ironwood sapling", "Rosewood sapling"};
+		int[] oldMinutes = {5120, 5760, 5760, 5760, 6400};
+		int[] stages = {8, 9, 9, 9, 10};
+		for (int i = 0; i < names.length; i++)
+		{
+			Crop crop = CropCatalog.findByName(PatchType.HARDWOOD_TREE, names[i]);
+			PatchTimer planted = new PatchTimer(patch, PatchType.HARDWOOD_TREE, crop,
+				observed, observed.plus(Duration.ofMinutes(oldMinutes[i])));
+			PatchTimer corrected = PatchTimerManager.correctLegacyHardwoodTimer(planted);
+			assertEquals(names[i], observed.plus(CropGrowthTimes.forCrop(crop)), corrected.getReadyAt());
+			assertTrue(corrected.isPlantedTimer());
+
+			long oldStageSeconds = (oldMinutes[i] * 60L + stages[i] - 2L) / (stages[i] - 1L);
+			PatchTimer inspected = new PatchTimer(patch, PatchType.HARDWOOD_TREE, crop,
+				observed, observed.plusSeconds(oldStageSeconds * (stages[i] - 3)), false, 3, stages[i]);
+			PatchTimer correctedInspection = PatchTimerManager.correctLegacyHardwoodTimer(inspected);
+			assertEquals(names[i], observed.plus(CropGrowthTimes.maximumRemainingAtStage(crop, 3, stages[i])),
+				correctedInspection.getReadyAt());
+			assertFalse(correctedInspection.isPlantedTimer());
+		}
+
+		Crop teak = CropCatalog.findByName(PatchType.HARDWOOD_TREE, "Teak sapling");
+		PatchTimer custom = new PatchTimer(patch, PatchType.HARDWOOD_TREE, teak,
+			observed, observed.plus(Duration.ofMinutes(4500)));
+		assertSame(custom, PatchTimerManager.correctLegacyHardwoodTimer(custom));
+	}
+
 	@Test
 	public void harvestingRequiresAnEmptyPatchState()
 	{

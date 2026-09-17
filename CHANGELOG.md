@@ -1,5 +1,16 @@
 # Version history
 
+## V1.3 — 2026-09-17
+
+- Corrected all five hardwood growth timers to match RuneLite's 640-minute
+  growth cycles: teak 4,480 minutes; mahogany, camphor, and ironwood 5,120;
+  rosewood 5,760. Inspected stage estimates now use the same cycle length.
+- Added checks for planted and inspected stage calculations for every hardwood.
+- Existing saved hardwood timers using the old estimates are corrected when that
+  character's timers load; unrelated timer values are left intact.
+- These are maximum estimates until a character's growth-tick offset is known;
+  RuneLite Time Tracking can predict a more precise completion time.
+
 ## V1.2 — 2026-09-17
 
 - Sidebar patch and contract cards now grow to fit wrapped text instead of relying

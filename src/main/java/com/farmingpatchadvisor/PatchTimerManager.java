@@ -1,5 +1,6 @@
 package com.farmingpatchadvisor;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -79,6 +80,7 @@ final class PatchTimerManager
 			return;
 		}
 
+		boolean correctedHardwoodTimer = false;
 		for (String record : stored.split(";"))
 		{
 			try
@@ -103,14 +105,65 @@ final class PatchTimerManager
 				PatchTimer timer = new PatchTimer(location, patchType, crop,
 					Instant.ofEpochMilli(Long.parseLong(fields[5])),
 					Instant.ofEpochMilli(Long.parseLong(fields[6])), plantedTimer, observedStage,
-					totalStages, dead, diseased, compostApplied, watered, picked);
-				loadTimer(timer);
+					 totalStages, dead, diseased, compostApplied, watered, picked);
+				PatchTimer corrected = correctLegacyHardwoodTimer(timer);
+				correctedHardwoodTimer |= corrected != timer;
+				loadTimer(corrected);
 			}
 			catch (RuntimeException ex)
 			{
 				log.debug("Ignoring malformed farming patch timer", ex);
 			}
 		}
+		if (correctedHardwoodTimer)
+		{
+			save();
+		}
+	}
+
+	static PatchTimer correctLegacyHardwoodTimer(PatchTimer timer)
+	{
+		if (timer.getPatchType() != PatchType.HARDWOOD_TREE)
+		{
+			return timer;
+		}
+		int oldMinutes;
+		switch (timer.getCrop().getName())
+		{
+			case "Teak sapling": oldMinutes = 5120; break;
+			case "Mahogany sapling":
+			case "Camphor sapling":
+			case "Ironwood sapling": oldMinutes = 5760; break;
+			case "Rosewood sapling": oldMinutes = 6400; break;
+			default: return timer;
+		}
+		Duration correctedRemaining;
+		long oldSeconds;
+		if (timer.isPlantedTimer())
+		{
+			oldSeconds = Duration.ofMinutes(oldMinutes).getSeconds();
+			correctedRemaining = CropGrowthTimes.forCrop(timer.getCrop());
+		}
+		else
+		{
+			int stages = timer.getTotalStages();
+			int stage = timer.getObservedStage();
+			if (stages < 2 || stage < 1 || stage >= stages)
+			{
+				return timer;
+			}
+			long oldStageSeconds = (oldMinutes * 60L + stages - 2L) / (stages - 1L);
+			oldSeconds = oldStageSeconds * (stages - stage);
+			correctedRemaining = CropGrowthTimes.maximumRemainingAtStage(timer.getCrop(), stage, stages);
+		}
+		if (!timer.getReadyAt().equals(timer.getPlantedAt().plusSeconds(oldSeconds)))
+		{
+			return timer;
+		}
+		return new PatchTimer(timer.getPatchLocation(), timer.getPatchType(), timer.getCrop(),
+			timer.getPlantedAt(), timer.getPlantedAt().plus(correctedRemaining),
+			timer.isPlantedTimer(), timer.getObservedStage(), timer.getTotalStages(),
+			timer.isDead(), timer.isDiseased(), timer.isCompostApplied(), timer.isWatered(), timer.isPicked());
 	}
 
 	synchronized void unload()
