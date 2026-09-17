@@ -9,6 +9,11 @@
 - Teleport checklist/custom route ordering is implemented in V1.1. Preserve the V1.0
   restore tag, and create a local checkpoint for each version after validation.
 - Keep updates local until the user explicitly requests publishing to GitHub/Plugin Hub.
+- For every new local version, also save a copy of its complete source archive and
+  matching test/transfer guide in
+  `C:\Users\Nate\Desktop\Farming Patch Advisor V1.3 Test Package`.
+  Use versioned filenames, preserve earlier versions, and verify the archive
+  against its local version tag. Do not email a new version unless requested.
 
 ## Logging
 
