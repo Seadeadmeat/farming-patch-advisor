@@ -29,7 +29,7 @@ final class FarmRouteEditor
 			return;
 		}
 		List<FarmRunPatch> active = routes.activePatches();
-		if (active.isEmpty())
+		if (active.isEmpty() && !routes.isCustom(run))
 		{
 			JOptionPane.showMessageDialog(parent, "Enable patches and locations in settings first.");
 			return;
@@ -57,11 +57,15 @@ final class FarmRouteEditor
 		});
 		JComboBox<String> order = new JComboBox<>(new String[]{"Default", "Custom"});
 		order.setSelectedItem(routes.isCustom(run) ? "Custom" : "Default");
-		JComboBox<RouteTeleport> teleport = new JComboBox<>(RouteTeleport.values());
+		JComboBox<RouteTeleport> teleport = new JComboBox<>();
 		list.addListSelectionListener(e ->
 		{
 			FarmRunPatch p = list.getSelectedValue();
-			if (p != null) { teleport.setSelectedItem(choices.get(FarmRouteManager.key(p))); }
+			if (p != null)
+			{
+				teleport.setModel(new DefaultComboBoxModel<>(RouteTeleport.viableValues(p)));
+				teleport.setSelectedItem(choices.getOrDefault(FarmRouteManager.key(p), RouteTeleport.NONE));
+			}
 		});
 		teleport.addActionListener(e ->
 		{
@@ -72,9 +76,11 @@ final class FarmRouteEditor
 		{
 			if ("Default".equals(order.getSelectedItem()))
 			{
-				List<FarmRunPatch> defaults = new ArrayList<>(FarmRunCatalog.patches());
-				defaults.removeIf(p -> !choices.containsKey(FarmRouteManager.key(p)));
-				defaults = FarmRouteManager.order(defaults, java.util.Collections.emptyList());
+				List<FarmRunPatch> defaults = routes.defaultPatches(run);
+				for (FarmRunPatch patch : defaults)
+				{
+					choices.putIfAbsent(FarmRouteManager.key(patch), routes.teleport(run, patch));
+				}
 				model.clear();
 				defaults.forEach(model::addElement);
 				list.setSelectedIndex(0);
@@ -82,8 +88,26 @@ final class FarmRouteEditor
 		});
 		JButton up = new JButton("Move up");
 		JButton down = new JButton("Move down");
+		JButton newRoute = new JButton("New custom route");
+		JButton addPatches = new JButton("Add patches...");
+		JButton removePatch = new JButton("Remove selected");
 		up.addActionListener(e -> move(model, list, list.getSelectedIndex() - 1, order));
 		down.addActionListener(e -> move(model, list, list.getSelectedIndex() + 1, order));
+		newRoute.addActionListener(e ->
+		{
+			model.clear();
+			teleport.setModel(new DefaultComboBoxModel<>());
+			order.setSelectedItem("Custom");
+		});
+		addPatches.addActionListener(e -> addPatches(parent, routes, run, model, list, choices, order));
+		removePatch.addActionListener(e ->
+		{
+			int selected = list.getSelectedIndex();
+			if (selected < 0) { return; }
+			model.remove(selected);
+			order.setSelectedItem("Custom");
+			if (!model.isEmpty()) { list.setSelectedIndex(Math.min(selected, model.size() - 1)); }
+		});
 		list.setDragEnabled(true);
 		list.setDropMode(DropMode.INSERT);
 		list.setTransferHandler(new TransferHandler()
@@ -126,6 +150,9 @@ final class FarmRouteEditor
 		JPanel controls = new JPanel(new GridLayout(0, 1, 0, 6));
 		JPanel arrows = new JPanel(new GridLayout(1, 2, 6, 0));
 		arrows.add(up); arrows.add(down); controls.add(arrows);
+		controls.add(newRoute);
+		JPanel membership = new JPanel(new GridLayout(1, 2, 6, 0));
+		membership.add(addPatches); membership.add(removePatch); controls.add(membership);
 		controls.add(new JLabel("Teleport for selected patch:"));
 		controls.add(teleport);
 		controls.add(new JLabel("Check remaining charges and daily teleport limits."));
@@ -151,6 +178,53 @@ final class FarmRouteEditor
 			{
 				JOptionPane.showMessageDialog(parent, "Character changed. Reopen the editor to save this character's route.");
 			}
+		}
+	}
+
+	private static void addPatches(Component parent, FarmRouteManager routes, FarmRunFilter run,
+		DefaultListModel<FarmRunPatch> model, JList<FarmRunPatch> route,
+		Map<String, RouteTeleport> choices, JComboBox<String> order)
+	{
+		List<FarmRunPatch> available = routes.availablePatches();
+		available.removeIf(p -> !run.includes(p.getFarmRunType()));
+		for (int i = 0; i < model.size(); i++)
+		{
+			String existing = FarmRouteManager.key(model.get(i));
+			available.removeIf(p -> FarmRouteManager.key(p).equals(existing));
+		}
+		if (available.isEmpty())
+		{
+			JOptionPane.showMessageDialog(parent, "Every enabled patch is already in this route.");
+			return;
+		}
+		JList<FarmRunPatch> candidates = new JList<>(available.toArray(new FarmRunPatch[0]));
+		candidates.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+		candidates.setVisibleRowCount(Math.min(12, available.size()));
+		candidates.setCellRenderer(new DefaultListCellRenderer()
+		{
+			@Override public Component getListCellRendererComponent(JList<?> l, Object value, int index,
+				boolean selected, boolean focus)
+			{
+				FarmRunPatch patch = (FarmRunPatch) value;
+				return super.getListCellRendererComponent(l,
+					patch.getDisplayName() + " — " + patch.getPatchType().getDisplayName(),
+					index, selected, focus);
+			}
+		});
+		JScrollPane scroll = new JScrollPane(candidates);
+		FarmingPatchPanel.styleNarrowScrollBar(scroll);
+		int result = JOptionPane.showConfirmDialog(parent, scroll, "Add patches to custom route",
+			JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+		if (result != JOptionPane.OK_OPTION) { return; }
+		for (FarmRunPatch patch : candidates.getSelectedValuesList())
+		{
+			model.addElement(patch);
+			choices.put(FarmRouteManager.key(patch), routes.teleport(run, patch));
+		}
+		if (!candidates.isSelectionEmpty())
+		{
+			order.setSelectedItem("Custom");
+			route.setSelectedIndex(model.size() - 1);
 		}
 	}
 

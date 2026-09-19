@@ -1,5 +1,15 @@
 # Version history
 
+## V1.5 — 2026-09-18
+
+- Added **New custom route**, **Add patches**, and **Remove selected** controls
+  to **Route & Teleports**. Players can build a route from enabled patches in the
+  selected run, then arrange them by dragging or with the move buttons.
+- Limited each patch's teleport dropdown to travel choices that reasonably serve
+  that patch's area. `None / no item needed` remains available everywhere.
+- Invalid older teleport selections safely fall back to no required item, while
+  disabled route stops retain their saved position and membership.
+
 ## V1.4 — 2026-09-18
 
 - Fixed living, harvestable cactus and potato cactus patches being marked dead

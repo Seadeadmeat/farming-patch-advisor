@@ -36,10 +36,33 @@ final class FarmRouteManager
 
 	List<FarmRunPatch> activePatches()
 	{
+		List<FarmRunPatch> patches = availablePatches();
+		FarmRunFilter run = filter.getSelected();
+		String included = read("routeIncluded_" + run.name());
+		if (isCustom(run) && included != null)
+		{
+			patches = included(patches, Arrays.asList(included.split(";")));
+		}
+		else
+		{
+			patches.removeIf(p -> !filter.includes(p.getPatchType()));
+		}
+		return ordered(patches, filter.getSelected());
+	}
+
+	List<FarmRunPatch> availablePatches()
+	{
 		List<FarmRunPatch> patches = new ArrayList<>(FarmRunCatalog.patches(config));
 		Set<ChecklistPatch> selected = ChecklistPatch.selected(config);
-		patches.removeIf(p -> !ChecklistPatch.includes(selected, p.getPatchType()) || !filter.includes(p.getPatchType()));
-		return ordered(patches, filter.getSelected());
+		patches.removeIf(p -> !ChecklistPatch.includes(selected, p.getPatchType()));
+		return patches;
+	}
+
+	List<FarmRunPatch> defaultPatches(FarmRunFilter run)
+	{
+		List<FarmRunPatch> patches = availablePatches();
+		patches.removeIf(p -> !run.includes(p.getFarmRunType()));
+		return order(patches, Collections.emptyList());
 	}
 
 	List<FarmRunPatch> ordered(List<FarmRunPatch> patches, FarmRunFilter run)
@@ -58,13 +81,25 @@ final class FarmRouteManager
 		return result;
 	}
 
+	static List<FarmRunPatch> included(List<FarmRunPatch> patches, List<String> keys)
+	{
+		Set<String> included = new java.util.HashSet<>(keys);
+		List<FarmRunPatch> result = new ArrayList<>(patches);
+		result.removeIf(p -> !included.contains(key(p)));
+		return result;
+	}
+
 	boolean isCustom(FarmRunFilter run) { return read("routeOrder_" + run.name()) != null; }
 	String profile() { return configManager.getRSProfileKey(); }
 
 	RouteTeleport teleport(FarmRunFilter run, FarmRunPatch patch)
 	{
 		String value = read("routeTeleport_" + run.name() + "_" + key(patch));
-		try { return value == null ? RouteTeleport.NONE : RouteTeleport.valueOf(value); }
+		try
+		{
+			RouteTeleport teleport = value == null ? RouteTeleport.NONE : RouteTeleport.valueOf(value);
+			return teleport.isViableFor(patch) ? teleport : RouteTeleport.NONE;
+		}
 		catch (IllegalArgumentException ex) { return RouteTeleport.NONE; }
 	}
 
@@ -81,8 +116,29 @@ final class FarmRouteManager
 			String previous = read(orderKey);
 			keys = mergeOrder(keys, previous == null ? Collections.emptyList() : Arrays.asList(previous.split(";")));
 			configManager.setRSProfileConfiguration(GROUP, orderKey, String.join(";", keys));
+			String includedKey = "routeIncluded_" + run.name();
+			List<String> included = new ArrayList<>();
+			for (FarmRunPatch p : patches) { included.add(key(p)); }
+			String previousIncluded = read(includedKey);
+			if (previousIncluded != null)
+			{
+				Set<String> available = new java.util.HashSet<>();
+				for (FarmRunPatch p : availablePatches()) { available.add(key(p)); }
+				for (String previousKey : previousIncluded.split(";"))
+				{
+					if (!available.contains(previousKey) && !included.contains(previousKey))
+					{
+						included.add(previousKey);
+					}
+				}
+			}
+			configManager.setRSProfileConfiguration(GROUP, includedKey, String.join(";", included));
 		}
-		else { configManager.unsetRSProfileConfiguration(GROUP, orderKey); }
+		else
+		{
+			configManager.unsetRSProfileConfiguration(GROUP, orderKey);
+			configManager.unsetRSProfileConfiguration(GROUP, "routeIncluded_" + run.name());
+		}
 		for (Map.Entry<String, RouteTeleport> choice : choices.entrySet())
 		{
 			configManager.setRSProfileConfiguration(GROUP,

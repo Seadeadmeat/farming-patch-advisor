@@ -25,6 +25,16 @@ public class FarmRouteManagerTest
 			FarmRouteManager.mergeOrder(Arrays.asList("c", "a", "new"), Arrays.asList("a", "hidden", "c")));
 	}
 
+	@Test public void customRouteCanKeepOnlyChosenPatches()
+	{
+		FarmRunPatch falador = new FarmRunPatch("Falador", "", PatchType.HERB);
+		FarmRunPatch catherby = new FarmRunPatch("Catherby", "", PatchType.HERB);
+		FarmRunPatch weiss = new FarmRunPatch("Weiss", "", PatchType.HERB);
+		assertEquals(Arrays.asList(catherby, weiss), FarmRouteManager.included(
+			Arrays.asList(falador, catherby, weiss),
+			Arrays.asList(FarmRouteManager.key(catherby), FarmRouteManager.key(weiss))));
+	}
+
 	@Test public void sharedStopsUseOneTabletButSeparateVisitsNeedAnother()
 	{
 		FarmRunPatch herb = new FarmRunPatch("Catherby", "", PatchType.HERB);
@@ -53,5 +63,30 @@ public class FarmRouteManagerTest
 		{
 			assertNotEquals(net.runelite.api.gameval.ItemID.JEWL_NECKLACE_OF_SKILLS, id);
 		}
+	}
+
+	@Test public void offersOnlyTeleportsThatServeTheSelectedPatchArea()
+	{
+		FarmRunPatch trollStronghold = new FarmRunPatch("Troll Stronghold", "", PatchType.HERB);
+		List<RouteTeleport> trollOptions = Arrays.asList(RouteTeleport.viableValues(trollStronghold));
+		assertTrue(trollOptions.contains(RouteTeleport.NONE));
+		assertTrue(trollOptions.contains(RouteTeleport.STRONGHOLD));
+		assertTrue(trollOptions.contains(RouteTeleport.TROLLHEIM));
+		assertFalse(trollOptions.contains(RouteTeleport.ECTOPHIAL));
+		assertFalse(trollOptions.contains(RouteTeleport.CATHERBY));
+
+		FarmRunPatch catherby = new FarmRunPatch("Catherby", "", PatchType.HERB);
+		List<RouteTeleport> catherbyOptions = Arrays.asList(RouteTeleport.viableValues(catherby));
+		assertTrue(catherbyOptions.contains(RouteTeleport.CATHERBY));
+		assertTrue(catherbyOptions.contains(RouteTeleport.CAMELOT));
+		assertFalse(catherbyOptions.contains(RouteTeleport.STRONGHOLD));
+	}
+
+	@Test public void areasWithoutSupportedTravelItemsStillAllowNoItem()
+	{
+		FarmRunPatch unsupported = new FarmRunPatch("Unknown future area", "", PatchType.HERB);
+		assertArrayEquals(new RouteTeleport[]{RouteTeleport.NONE}, RouteTeleport.viableValues(unsupported));
+		FarmRunPatch sailingOnly = new FarmRunPatch("Anglers' Retreat", "", PatchType.HARDWOOD_TREE);
+		assertArrayEquals(new RouteTeleport[]{RouteTeleport.NONE}, RouteTeleport.viableValues(sailingOnly));
 	}
 }

@@ -1,11 +1,14 @@
 # Farming Patch Advisor
 
-Current version: **V1.4**. See [version history](CHANGELOG.md).
+Current version: **V1.5**. See [version history](CHANGELOG.md).
 
 ### Custom routes and teleports
 
 Choose your run in **Farm Run**, then open **Route & Teleports**. Select a patch
 and choose its teleport. Drag stops or use **Move up / Move down**, then **Save route**.
+Use **New custom route**, **Add patches**, and **Remove selected** to build a
+route from the enabled patches in that run. Each patch only offers teleports that
+reasonably serve its area; `None / no item needed` is always available.
 Choose **Default** to reset the order, or **Cancel** to discard edits.
 Orders and teleport choices are saved separately for each character and run selection.
 Only enabled patches and locations appear. Custom order controls panel and ground-label

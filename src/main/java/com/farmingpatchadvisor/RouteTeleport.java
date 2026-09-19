@@ -1,5 +1,6 @@
 package com.farmingpatchadvisor;
 
+import java.util.EnumSet;
 import net.runelite.api.gameval.ItemID;
 
 /** Explicit player choices: this does not infer unlocks or remaining daily charges. */
@@ -58,6 +59,67 @@ enum RouteTeleport
 	}
 
 	int[] itemIds() { return itemIds.clone(); }
+
+	boolean isViableFor(FarmRunPatch patch)
+	{
+		return viableFor(patch).contains(this);
+	}
+
+	static RouteTeleport[] viableValues(FarmRunPatch patch)
+	{
+		EnumSet<RouteTeleport> viable = viableFor(patch);
+		return viable.toArray(new RouteTeleport[0]);
+	}
+
+	private static EnumSet<RouteTeleport> viableFor(FarmRunPatch patch)
+	{
+		EnumSet<RouteTeleport> viable = EnumSet.of(NONE);
+		String location = patch == null ? "" : patch.getLocation();
+		switch (location)
+		{
+			case "Falador": add(viable, EXPLORER_2, EXPLORER_3, EXPLORER_4, FALADOR, SKILLS); break;
+			case "Morytania": add(viable, ECTOPHIAL); break;
+			case "Catherby": add(viable, CATHERBY, CAMELOT); break;
+			case "Ardougne": add(viable, ARDY_2, ARDY_3, ARDY_4, ARDOUGNE, SKILLS); break;
+			case "Kourend": add(viable, XERIC, SKILLS, HOUSE); break;
+			case "Troll Stronghold": add(viable, STRONGHOLD, TROLLHEIM, HOUSE); break;
+			case "Harmony Island": add(viable, HARMONY, ECTOPHIAL); break;
+			case "Weiss": add(viable, WEISS, HOUSE); break;
+			case "Farming Guild": add(viable, FARM_CAPE, FARM_CAPE_TRIMMED, SKILLS); break;
+			case "Civitas illa Fortis": add(viable, QUETZAL_BASIC, QUETZAL_ENHANCED, QUETZAL_PERFECTED, FORTIS); break;
+			case "Prifddinas":
+			case "Lletya": add(viable, CRYSTAL); break;
+			case "Lumbridge": add(viable, LUMBRIDGE); break;
+			case "Varrock":
+			case "Champions' Guild": add(viable, VARROCK); break;
+			case "Gnome Stronghold":
+			case "Tree Gnome Village": add(viable, ROYAL_POD, SEED_POD); break;
+			case "Taverley": add(viable, TAVERLEY, HOUSE); break;
+			case "Auburnvale":
+			case "Kastori":
+			case "Avium Savannah": add(viable, QUETZAL_BASIC, QUETZAL_ENHANCED, QUETZAL_PERFECTED); break;
+			case "Brimhaven":
+			case "Tai Bwo Wannai": add(viable, BRIMHAVEN, HOUSE); break;
+			case "Fossil Island":
+			case "Seaweed": add(viable, DIGSITE); break;
+			case "Yanille": add(viable, YANILLE, HOUSE); break;
+			case "Seers' Village": add(viable, CAMELOT); break;
+			case "Entrana": add(viable, FALADOR); break;
+			case "Aldarin": add(viable, HOUSE, QUETZAL_BASIC, QUETZAL_ENHANCED, QUETZAL_PERFECTED); break;
+			case "Rimmington": add(viable, HOUSE, FALADOR, SKILLS); break;
+			case "Etceteria": add(viable, HOUSE); break;
+			case "Al Kharid": add(viable, LUMBRIDGE); break;
+			case "Draynor Manor": add(viable, LUMBRIDGE, EXPLORER_2, EXPLORER_3, EXPLORER_4); break;
+			case "Port Sarim": add(viable, FALADOR, EXPLORER_2, EXPLORER_3, EXPLORER_4); break;
+			default: break;
+		}
+		return viable;
+	}
+
+	private static void add(EnumSet<RouteTeleport> values, RouteTeleport... additions)
+	{
+		for (RouteTeleport addition : additions) { values.add(addition); }
+	}
 
 	static boolean isTeleportItem(int itemId)
 	{
