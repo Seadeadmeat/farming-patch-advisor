@@ -1,5 +1,12 @@
 # Version history
 
+## V1.4 — 2026-09-18
+
+- Fixed living, harvestable cactus and potato cactus patches being marked dead
+  when their object actions include both a harvest option and `Clear`.
+- Explicitly dead plants and non-harvestable plants whose only applicable patch
+  action is `Clear` continue to use the red `DEAD` state.
+
 ## V1.3 — 2026-09-17
 
 - Corrected all five hardwood growth timers to match RuneLite's 640-minute

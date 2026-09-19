@@ -112,6 +112,19 @@ public class PatchTimerTest
 	}
 
 	@Test
+	public void doesNotTreatHarvestableCactusAsDeadBecauseItCanBeCleared()
+	{
+		assertFalse(PatchTimerManager.isDeadObjectState("Cactus",
+			new String[]{"Inspect", "Pick-spine", "Clear"}));
+		assertFalse(PatchTimerManager.isDeadObjectState("Potato cactus",
+			new String[]{"Inspect", "Harvest", "Clear"}));
+		assertTrue(PatchTimerManager.isDeadObjectState("Cactus",
+			new String[]{"Inspect", "Clear"}));
+		assertTrue(PatchTimerManager.isDeadObjectState("Dead cactus",
+			new String[]{"Inspect"}));
+	}
+
+	@Test
 	public void formatsPlantedPatchTimeInsteadOfSeedQuantity()
 	{
 		Crop potato = CropCatalog.findByName(PatchType.ALLOTMENT, "Potato");

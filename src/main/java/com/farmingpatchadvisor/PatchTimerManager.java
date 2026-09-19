@@ -898,7 +898,7 @@ final class PatchTimerManager
 	{
 		String normalized = name == null ? "" : name.toLowerCase();
 		return normalized.contains("dead") || containsAction(actions, "Clear")
-			&& !normalized.contains("stump");
+			&& !normalized.contains("stump") && !hasHarvestAction(actions);
 	}
 
 	static boolean hasHarvestAction(String[] actions)
