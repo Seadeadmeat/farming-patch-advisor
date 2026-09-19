@@ -419,6 +419,13 @@ final class PatchTimerManager
 				save();
 				return;
 			}
+			// Some patches briefly expose only Clear after a successful harvest action.
+			// That is a harvest-state transition, not proof that the living crop died.
+			if (isLiveHarvestTransition(name, actions))
+			{
+				dead = false;
+				pendingHarvests.remove(existing.key());
+			}
 		}
 		// A partially harvested bush/cactus can expose Clear while produce remains.
 		if (harvest != null && harvest.picked && hasHarvestAction(actions)
@@ -565,7 +572,7 @@ final class PatchTimerManager
 		PatchTimer timer = findSamePatch(clicked, patchType, COMPLETION_DISTANCE);
 		if (timer != null)
 		{
-			pendingHarvests.putIfAbsent(timer.key(), new PendingHarvest(composition.getId(), false));
+			pendingHarvests.put(timer.key(), new PendingHarvest(composition.getId(), false));
 		}
 	}
 
@@ -590,7 +597,7 @@ final class PatchTimerManager
 		PatchTimer timer = findSamePatch(clicked, patchType, COMPLETION_DISTANCE);
 		if (timer != null)
 		{
-			pendingHarvests.putIfAbsent(timer.key(), new PendingHarvest(composition.getId(), true));
+			pendingHarvests.put(timer.key(), new PendingHarvest(composition.getId(), true));
 		}
 	}
 
@@ -922,6 +929,12 @@ final class PatchTimerManager
 			&& !hasHarvestAction(actions) && !isDeadObjectState(name, actions)
 			&& !isDiseasedObjectState(name, actions)
 			&& CropCatalog.findInAnyText(name) == null;
+	}
+
+	static boolean isLiveHarvestTransition(String name, String[] actions)
+	{
+		return !hasExplicitDeadName(name) && !isDiseasedObjectState(name, actions)
+			&& !isEmptyPatchState(name, actions);
 	}
 
 	private static final class PendingHarvest

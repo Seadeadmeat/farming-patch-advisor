@@ -1,6 +1,6 @@
 # Farming Patch Advisor
 
-Current version: **V1.6**. See [version history](CHANGELOG.md).
+Current version: **V1.7**. See [version history](CHANGELOG.md).
 
 ### Custom routes and teleports
 

@@ -28,7 +28,7 @@ dependencies {
 }
 
 group = 'com.farmingpatchadvisor'
-version = '1.6'
+version = '1.7'
 
 tasks.withType(JavaCompile).configureEach {
 	options.encoding = 'UTF-8'

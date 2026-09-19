@@ -1,5 +1,15 @@
 # Version history
 
+## V1.7 — 2026-09-18
+
+- Fixed the Civitas illa Fortis patch changing from `READY` to `DEAD` when
+  harvesting began. A temporary `Clear` action during a confirmed harvest now
+  remains a live harvest transition.
+- Explicit dead and diseased states still take priority, and completed timers
+  are removed only after the patch object becomes genuinely empty.
+- Refreshes the pending harvest state on every harvest or pick action so
+  multi-pick crops continue to be evaluated from their latest object state.
+
 ## V1.6 — 2026-09-18
 
 - Audited every protection payment used by the plugin against the current Old

@@ -66,6 +66,19 @@ public class PatchTimerTest
 	}
 
 	@Test
+	public void keepsHarvestedCivitasCropReadyUntilThePatchIsActuallyEmpty()
+	{
+		assertTrue(PatchTimerManager.isLiveHarvestTransition("Herbs",
+			new String[]{"Clear", "Inspect", "Guide"}));
+		assertFalse(PatchTimerManager.isLiveHarvestTransition("Dead herbs",
+			new String[]{"Clear", "Inspect", "Guide"}));
+		assertFalse(PatchTimerManager.isLiveHarvestTransition("Diseased herbs",
+			new String[]{"Cure", "Inspect", "Guide"}));
+		assertFalse(PatchTimerManager.isLiveHarvestTransition("Herb patch",
+			new String[]{"Inspect", "Guide"}));
+	}
+
+	@Test
 	public void usesConsistentTimerStateColors()
 	{
 		Crop potato = CropCatalog.findByName(PatchType.ALLOTMENT, "Potato");
