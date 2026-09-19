@@ -51,26 +51,26 @@ final class ProtectionPaymentCatalog
 		add(payments, ItemID.REDBERRY_BUSH_SEED, payment("Cabbages(10)", ItemID.SACK_CABBAGE_10, 4));
 		add(payments, ItemID.CADAVABERRY_BUSH_SEED, payment("Tomatoes(5)", ItemID.BASKET_TOMATO_5, 3));
 		add(payments, ItemID.DWELLBERRY_BUSH_SEED, payment("Strawberries(5)", ItemID.BASKET_STRAWBERRY_5, 3));
-		add(payments, ItemID.JANGERBERRY_BUSH_SEED, payment("Watermelons", ItemID.WATERMELON, 6));
-		add(payments, ItemID.WHITEBERRY_BUSH_SEED, payment("Bittercap mushrooms", ItemID.BITTERCAP_MUSHROOM, 8));
+		add(payments, ItemID.JANGERBERRY_BUSH_SEED, payment("Watermelon", ItemID.WATERMELON, 6));
+		add(payments, ItemID.WHITEBERRY_BUSH_SEED, payment("Bittercap mushroom", ItemID.BITTERCAP_MUSHROOM, 8));
 
 		// Trees and fruit trees.
 		add(payments, ItemID.PLANTPOT_OAK_SAPLING, payment("Tomatoes(5)", ItemID.BASKET_TOMATO_5, 1));
 		add(payments, ItemID.PLANTPOT_WILLOW_SAPLING, payment("Apples(5)", ItemID.BASKET_APPLE_5, 1));
 		add(payments, ItemID.PLANTPOT_MAPLE_SAPLING, payment("Oranges(5)", ItemID.BASKET_ORANGE_5, 1));
-		add(payments, ItemID.PLANTPOT_YEW_SAPLING, payment("Cactus spines", ItemID.CACTUS_SPINE, 10));
-		add(payments, ItemID.PLANTPOT_MAGIC_TREE_SAPLING, payment("Coconuts", ItemID.COCONUT, 25));
+		add(payments, ItemID.PLANTPOT_YEW_SAPLING, payment("Cactus spine", ItemID.CACTUS_SPINE, 10));
+		add(payments, ItemID.PLANTPOT_MAGIC_TREE_SAPLING, payment("Coconut", ItemID.COCONUT, 25));
 		add(payments, ItemID.PLANTPOT_APPLE_SAPLING, payment("Sweetcorn", ItemID.SWEETCORN, 9));
 		add(payments, ItemID.PLANTPOT_BANANA_SAPLING, payment("Apples(5)", ItemID.BASKET_APPLE_5, 4));
 		add(payments, ItemID.PLANTPOT_ORANGE_SAPLING, payment("Strawberries(5)", ItemID.BASKET_STRAWBERRY_5, 3));
 		add(payments, ItemID.PLANTPOT_CURRY_SAPLING, payment("Bananas(5)", ItemID.BASKET_BANANA_5, 5));
-		add(payments, ItemID.PLANTPOT_PINEAPPLE_SAPLING, payment("Watermelons", ItemID.WATERMELON, 10));
-		add(payments, ItemID.PLANTPOT_PAPAYA_SAPLING, payment("Pineapples", ItemID.PINEAPPLE, 10));
+		add(payments, ItemID.PLANTPOT_PINEAPPLE_SAPLING, payment("Watermelon", ItemID.WATERMELON, 10));
+		add(payments, ItemID.PLANTPOT_PAPAYA_SAPLING, payment("Pineapple", ItemID.PINEAPPLE, 10));
 		add(payments, ItemID.PLANTPOT_PALM_SAPLING, payment("Papaya fruit", ItemID.PAPAYA, 15));
-		add(payments, ItemID.PLANTPOT_DRAGONFRUIT_SAPLING, payment("Coconuts", ItemID.COCONUT, 15));
+		add(payments, ItemID.PLANTPOT_DRAGONFRUIT_SAPLING, payment("Coconut", ItemID.COCONUT, 15));
 
 		// Hardwood and special trees.
-		add(payments, ItemID.PLANTPOT_TEAK_SAPLING, payment("Limpwurt roots", ItemID.LIMPWURT_ROOT, 15));
+		add(payments, ItemID.PLANTPOT_TEAK_SAPLING, payment("Limpwurt root", ItemID.LIMPWURT_ROOT, 15));
 		add(payments, ItemID.PLANTPOT_MAHOGANY_SAPLING, payment("Yanillian hops", ItemID.YANILLIAN_HOPS, 25));
 		add(payments, ItemID.PLANTPOT_CAMPHOR_SAPLING, payment("White berries", ItemID.WHITE_BERRIES, 10));
 		add(payments, ItemID.PLANTPOT_IRONWOOD_SAPLING, payment("Curry leaf", ItemID.CURRY_LEAF, 10));
@@ -79,7 +79,7 @@ final class ProtectionPaymentCatalog
 		add(payments, ItemID.PLANTPOT_SPIRIT_TREE_SAPLING,
 			payment("Monkey nuts", ItemID.MM_MONKEY_NUTS, 5),
 			payment("Monkey bar", ItemID.MM_MONKEY_BAR, 1),
-			payment("Ground suqah tooth", ItemID.LUNAR_GROUNDTOOTH, 1));
+			payment("Ground tooth", ItemID.LUNAR_GROUNDTOOTH, 1));
 		add(payments, ItemID.PLANTPOT_CELASTRUS_TREE_SAPLING, payment("Potato cactus", ItemID.CACTUS_POTATO, 8));
 		add(payments, ItemID.PLANTPOT_REDWOOD_TREE_SAPLING, payment("Dragonfruit", ItemID.DRAGONFRUIT, 6));
 

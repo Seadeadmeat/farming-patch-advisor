@@ -1,5 +1,17 @@
 # Version history
 
+## V1.6 — 2026-09-18
+
+- Audited every protection payment used by the plugin against the current Old
+  School RuneScape Wiki, including allotments, hops, bushes, trees, fruit trees,
+  hardwoods, special patches, cacti, seaweed, and coral. All 51 existing payment
+  item IDs and quantities were correct.
+- Updated payment labels to use exact in-game item names where the checklist had
+  used informal plurals, such as `Coconut`, `Watermelon`, and `Ground tooth`.
+- Added an exhaustive regression test for every payable crop in the catalog and
+  for crops that correctly have no gardener protection payment. Grape-vine
+  saltpetre remains a planting requirement, not a protection payment.
+
 ## V1.5 — 2026-09-18
 
 - Added **New custom route**, **Add patches**, and **Remove selected** controls
