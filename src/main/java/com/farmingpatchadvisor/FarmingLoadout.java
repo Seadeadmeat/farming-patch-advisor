@@ -27,6 +27,7 @@ final class FarmingLoadout
 	private final Provider<PatchTimerManager> timerManagerProvider;
 	private final FarmRunFilterState runFilterState;
 	private final FarmRouteManager routes;
+	private final CompostBinManager compostBinManager;
 	private final Map<Integer, Integer> bankItems = new HashMap<>();
 	private final Map<Integer, Integer> inventoryItems = new HashMap<>();
 	private final Map<Integer, Integer> equipmentItems = new HashMap<>();
@@ -42,7 +43,7 @@ final class FarmingLoadout
 	@Inject
 	private FarmingLoadout(FarmingPatchAdvisorPlugin plugin, FarmingPatchAdvisorConfig config,
 		FarmingContractManager contractManager, Provider<PatchTimerManager> timerManagerProvider,
-		FarmRunFilterState runFilterState, FarmRouteManager routes)
+		FarmRunFilterState runFilterState, FarmRouteManager routes, CompostBinManager compostBinManager)
 	{
 		this.plugin = plugin;
 		this.config = config;
@@ -50,6 +51,7 @@ final class FarmingLoadout
 		this.timerManagerProvider = timerManagerProvider;
 		this.runFilterState = runFilterState;
 		this.routes = routes;
+		this.compostBinManager = compostBinManager;
 	}
 
 	synchronized void onItemContainerChanged(ItemContainerChanged event)
@@ -249,6 +251,103 @@ final class FarmingLoadout
 	 * deliberately do not follow the farm-run dropdown: an accepted contract remains actionable
 	 * regardless of which normal run is currently selected.
 	 */
+	synchronized List<ChecklistItem> compostChecklist()
+	{
+		if (!config.enableCompostBins()
+			|| !runFilterState.includesCompost(config.includeCompostBinsInFarmRuns()))
+		{
+			return Collections.emptyList();
+		}
+		CompostSupplyPlan plan = compostBinManager.supplyPlan();
+		List<ChecklistItem> items = new ArrayList<>();
+		if (config.checklistCompostSupplies())
+		{
+			CompostTarget target = config.compostTarget();
+			if (plan.getIngredientQuantity() > 0)
+			{
+				items.add(new ChecklistItem(target.getIngredientName(),
+					inventoryCount(target.getIngredientItemId()), plan.getIngredientQuantity(), false));
+			}
+			if (plan.getVolcanicAshQuantity() > 0)
+			{
+				items.add(new ChecklistItem("Volcanic ash", inventoryCount(ItemID.FOSSIL_VOLCANIC_ASH),
+					plan.getVolcanicAshQuantity(), false));
+			}
+			if (plan.getCompostPotionDoses() > 0)
+			{
+				items.add(new ChecklistItem("Compost potion", inventoryCompostPotionDoses(),
+					plan.getCompostPotionDoses(), false));
+			}
+		}
+		if (config.checklistCompostBuckets() && plan.getBucketQuantity() > 0)
+		{
+			int bottomless = count(ItemID.BOTTOMLESS_COMPOST_BUCKET)
+				+ count(ItemID.BOTTOMLESS_COMPOST_BUCKET_FILLED);
+			if (bottomless > 0)
+			{
+				int carried = inventoryCount(ItemID.BOTTOMLESS_COMPOST_BUCKET)
+					+ inventoryCount(ItemID.BOTTOMLESS_COMPOST_BUCKET_FILLED);
+				items.add(new ChecklistItem("Bottomless compost bucket", carried, 1, false));
+			}
+			else
+			{
+				items.add(new ChecklistItem("Bucket", inventoryCount(ItemID.BUCKET_EMPTY),
+					plan.getBucketQuantity(), false));
+			}
+		}
+		return items;
+	}
+
+	synchronized Set<Integer> compostChecklistItemIds()
+	{
+		Set<Integer> itemIds = new HashSet<>();
+		if (!config.enableCompostBins()
+			|| !runFilterState.includesCompost(config.includeCompostBinsInFarmRuns()))
+		{
+			return itemIds;
+		}
+		CompostSupplyPlan plan = compostBinManager.supplyPlan();
+		if (config.checklistCompostSupplies())
+		{
+			if (plan.getIngredientQuantity() > 0)
+			{
+				itemIds.add(config.compostTarget().getIngredientItemId());
+			}
+			if (plan.getVolcanicAshQuantity() > 0)
+			{
+				itemIds.add(ItemID.FOSSIL_VOLCANIC_ASH);
+			}
+			if (plan.getCompostPotionDoses() > 0)
+			{
+				itemIds.add(ItemID.SUPERCOMPOST_POTION_1);
+				itemIds.add(ItemID.SUPERCOMPOST_POTION_2);
+				itemIds.add(ItemID.SUPERCOMPOST_POTION_3);
+				itemIds.add(ItemID.SUPERCOMPOST_POTION_4);
+			}
+		}
+		if (config.checklistCompostBuckets() && plan.getBucketQuantity() > 0)
+		{
+			if (count(ItemID.BOTTOMLESS_COMPOST_BUCKET) + count(ItemID.BOTTOMLESS_COMPOST_BUCKET_FILLED) > 0)
+			{
+				itemIds.add(ItemID.BOTTOMLESS_COMPOST_BUCKET);
+				itemIds.add(ItemID.BOTTOMLESS_COMPOST_BUCKET_FILLED);
+			}
+			else
+			{
+				itemIds.add(ItemID.BUCKET_EMPTY);
+			}
+		}
+		return itemIds;
+	}
+
+	private int inventoryCompostPotionDoses()
+	{
+		return inventoryCount(ItemID.SUPERCOMPOST_POTION_1)
+			+ inventoryCount(ItemID.SUPERCOMPOST_POTION_2) * 2
+			+ inventoryCount(ItemID.SUPERCOMPOST_POTION_3) * 3
+			+ inventoryCount(ItemID.SUPERCOMPOST_POTION_4) * 4;
+	}
+
 	synchronized List<ChecklistItem> contractChecklist(boolean includePayments)
 	{
 		FarmingContract contract = config.showFarmingContract() ? contractManager.getContract() : null;
@@ -309,6 +408,10 @@ final class FarmingLoadout
 			{
 				itemIds.add(remedyItemId);
 			}
+		}
+		if (runFilterState.includesCompost(config.includeCompostBinsInFarmRuns()))
+		{
+			itemIds.addAll(compostChecklistItemIds());
 		}
 		return itemIds;
 	}

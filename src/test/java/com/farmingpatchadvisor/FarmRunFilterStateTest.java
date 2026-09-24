@@ -25,6 +25,10 @@ public class FarmRunFilterStateTest
 		assertTrue(state.includes(PatchType.FRUIT_TREE));
 		assertTrue(state.includes(PatchType.CALQUAT));
 		assertFalse(state.includes(PatchType.HARDWOOD_TREE));
+
+		state.setSelected(FarmRunFilter.COMPOST);
+		assertFalse(state.includes(PatchType.HERB));
+		assertTrue(state.includesCompost(false));
 	}
 
 	@Test

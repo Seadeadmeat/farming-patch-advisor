@@ -47,8 +47,10 @@ final class FarmingPatchPanel extends PluginPanel
 	private final FarmingLoadout farmingLoadout;
 	private final FarmRunFilterState runFilterState;
 	private final FarmRouteManager routes;
+	private final CompostBinManager compostBinManager;
 	private final JComboBox<FarmRunFilter> runFilter = new JComboBox<>(FarmRunFilter.values());
 	private final JToggleButton checklistToggle = new JToggleButton();
+	private final JButton editRoute = new JButton("Route & Teleports");
 	private final JPanel patches = new JPanel();
 	private final JScrollPane patchScrollPane;
 	private final Timer refreshTimer;
@@ -57,7 +59,7 @@ final class FarmingPatchPanel extends PluginPanel
 	@Inject
 	private FarmingPatchPanel(PatchTimerManager timerManager, FarmingPatchAdvisorConfig config,
 		ConfigManager configManager, FarmingContractManager contractManager, FarmingLoadout farmingLoadout,
-		FarmRunFilterState runFilterState, FarmRouteManager routes)
+		FarmRunFilterState runFilterState, FarmRouteManager routes, CompostBinManager compostBinManager)
 	{
 		super(false);
 		this.timerManager = timerManager;
@@ -67,6 +69,7 @@ final class FarmingPatchPanel extends PluginPanel
 		this.farmingLoadout = farmingLoadout;
 		this.runFilterState = runFilterState;
 		this.routes = routes;
+		this.compostBinManager = compostBinManager;
 		setLayout(new BorderLayout());
 		setBackground(ColorScheme.DARK_GRAY_COLOR);
 		setBorder(BorderFactory.createLineBorder(ColorScheme.BORDER_COLOR));
@@ -96,10 +99,23 @@ final class FarmingPatchPanel extends PluginPanel
 		JButton clear = new JButton("Clear timers");
 		styleButton(clear);
 		styleCompactButton(clear);
-		clear.addActionListener(event -> timerManager.clear());
+		clear.addActionListener(event ->
+		{
+			if (runFilterState.getSelected().isCompostOnly())
+			{
+				compostBinManager.clear();
+			}
+			else
+			{
+				timerManager.clear();
+				if (runFilterState.getSelected() == FarmRunFilter.ALL)
+				{
+					compostBinManager.clear();
+				}
+			}
+		});
 		actions.add(clear);
 		header.add(actions);
-		JButton editRoute = new JButton("Route & Teleports");
 		styleButton(editRoute);
 		editRoute.setAlignmentX(Component.LEFT_ALIGNMENT);
 		editRoute.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
@@ -145,17 +161,28 @@ final class FarmingPatchPanel extends PluginPanel
 	{
 		updateChecklistButton();
 		patches.removeAll();
-		if (config.showFarmingContract())
-		{
-			patches.add(createContractCard());
-			patches.add(Box.createRigidArea(new Dimension(0, 10)));
-		}
 		Set<ChecklistPatch> selectedPatches = ChecklistPatch.selected(config);
 		List<PatchTimer> unmatchedTimers = new ArrayList<>(timerManager.getTimers());
 		unmatchedTimers.removeIf(timer -> !ChecklistPatch.includes(selectedPatches, timer.getPatchType()));
 		int order = 1;
 		List<FarmRunPatch> enabledCatalog = FarmRunCatalog.patches(config);
 		updateRunFilterOptions(enabledCatalog, selectedPatches);
+		FarmRunFilter selectedFilter = runFilterState.getSelected();
+		editRoute.setEnabled(!selectedFilter.isCompostOnly());
+		editRoute.setToolTipText(selectedFilter.isCompostOnly()
+			? "Compost bins use the efficient built-in route" : null);
+		if (!selectedFilter.isCompostOnly() && config.showFarmingContract())
+		{
+			patches.add(createContractCard());
+			patches.add(Box.createRigidArea(new Dimension(0, 10)));
+		}
+		if (selectedFilter.isCompostOnly())
+		{
+			addCompostSection();
+			patches.revalidate();
+			patches.repaint();
+			return;
+		}
 		if (routes.isCustom(runFilterState.getSelected()))
 		{
 			for (FarmRunPatch patch : routes.activePatches())
@@ -211,6 +238,10 @@ final class FarmingPatchPanel extends PluginPanel
 			}
 			patches.add(Box.createRigidArea(new Dimension(0, 7)));
 		}
+		if (selectedFilter.includesCompost(config.includeCompostBinsInFarmRuns()))
+		{
+			addCompostSection();
+		}
 		patches.revalidate();
 		patches.repaint();
 	}
@@ -229,9 +260,10 @@ final class FarmingPatchPanel extends PluginPanel
 
 		FarmRunFilter current = (FarmRunFilter) runFilter.getSelectedItem();
 		List<FarmRunFilter> availableFilters = new ArrayList<>();
+		boolean compostAvailable = !compostBinManager.enabledLocations().isEmpty();
 		for (FarmRunFilter filter : FarmRunFilter.values())
 		{
-			if (filter.isAvailable(availableRunTypes))
+			if (filter.isAvailable(availableRunTypes, compostAvailable))
 			{
 				availableFilters.add(filter);
 			}
@@ -439,6 +471,96 @@ final class FarmingPatchPanel extends PluginPanel
 		label.setFont(label.getFont().deriveFont(Font.BOLD));
 		header.add(label, BorderLayout.WEST);
 		return finishCard(header);
+	}
+
+	private void addCompostSection()
+	{
+		JPanel header = new JPanel(new BorderLayout());
+		header.setAlignmentX(Component.LEFT_ALIGNMENT);
+		header.setBackground(ColorScheme.MEDIUM_GRAY_COLOR);
+		header.setBorder(BorderFactory.createEmptyBorder(6, 8, 6, 8));
+		JLabel label = new JLabel("Compost Run");
+		label.setForeground(Color.WHITE);
+		label.setFont(label.getFont().deriveFont(Font.BOLD));
+		header.add(label, BorderLayout.WEST);
+		patches.add(finishCard(header));
+		patches.add(Box.createRigidArea(new Dimension(0, 5)));
+		int order = 1;
+		for (CompostBinLocation location : compostBinManager.enabledLocations())
+		{
+			patches.add(createCompostCard(order++, location, compostBinManager.getState(location)));
+			patches.add(Box.createRigidArea(new Dimension(0, 5)));
+		}
+		patches.add(Box.createRigidArea(new Dimension(0, 7)));
+	}
+
+	private JPanel createCompostCard(int order, CompostBinLocation location, CompostBinState state)
+	{
+		Instant now = Instant.now();
+		Color color = compostStateColor(state, now);
+		JPanel card = createCard(!Color.WHITE.equals(color) && !Color.LIGHT_GRAY.equals(color), color);
+		addLine(card, order + ". " + location.getDisplayName(), color, true);
+		card.add(Box.createRigidArea(new Dimension(0, 3)));
+		addLine(card, "Bin: " + location.getBinName(), Color.LIGHT_GRAY, false);
+		if (state == null)
+		{
+			addLine(card, "Status: Not inspected", Color.GRAY, false);
+		}
+		else
+		{
+			String status = CompostBinManager.remaining(state, now);
+			if (status == null)
+			{
+				status = state.getPhase() == CompostBinPhase.FILLING
+					? "FILLING " + state.getAmount() + "/" + location.getCapacity()
+					: state.getPhase().toString();
+			}
+			addLine(card, "Status: " + status, color, true);
+			if (state.getProduct() != CompostProduct.EMPTY && state.getProduct() != CompostProduct.UNKNOWN)
+			{
+				addLine(card, "Contents: " + compostProductName(state.getProduct()), Color.LIGHT_GRAY, false);
+			}
+		}
+		addLine(card, compostBinManager.nextAction(location, state), Color.LIGHT_GRAY, false);
+		JPopupMenu menu = new JPopupMenu();
+		JMenuItem reset = new JMenuItem("Reset " + location.getDisplayName());
+		reset.addActionListener(event -> compostBinManager.reset(location));
+		menu.add(reset);
+		card.setComponentPopupMenu(menu);
+		for (Component component : card.getComponents())
+		{
+			if (component instanceof javax.swing.JComponent)
+			{
+				((javax.swing.JComponent) component).setComponentPopupMenu(menu);
+			}
+		}
+		return finishCard(card);
+	}
+
+	private static Color compostStateColor(CompostBinState state, Instant now)
+	{
+		if (state == null || state.getPhase() == CompostBinPhase.EMPTY)
+		{
+			return Color.LIGHT_GRAY;
+		}
+		if (state.isReady(now) || state.getPhase() == CompostBinPhase.READY
+			|| state.getPhase() == CompostBinPhase.COLLECTING)
+		{
+			return Color.GREEN;
+		}
+		return state.getPhase() == CompostBinPhase.FILLING ? Color.ORANGE : Color.WHITE;
+	}
+
+	private static String compostProductName(CompostProduct product)
+	{
+		switch (product)
+		{
+			case COMPOST: return "Compost";
+			case SUPERCOMPOST: return "Supercompost";
+			case ULTRACOMPOST: return "Ultracompost";
+			case ROTTEN_TOMATO: return "Rotten tomatoes";
+			default: return product.toString();
+		}
 	}
 
 	private void toggleChecklist()

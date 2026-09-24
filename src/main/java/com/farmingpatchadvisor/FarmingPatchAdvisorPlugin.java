@@ -74,6 +74,9 @@ public class FarmingPatchAdvisorPlugin extends Plugin
 	private StorageScanReminderOverlay storageScanReminderOverlay;
 
 	@Inject
+	private CompostBinOverlay compostBinOverlay;
+
+	@Inject
 	private FarmingLoadout farmingLoadout;
 
 	@Inject
@@ -81,6 +84,9 @@ public class FarmingPatchAdvisorPlugin extends Plugin
 
 	@Inject
 	private PatchTimerManager timerManager;
+
+	@Inject
+	private CompostBinManager compostBinManager;
 
 	@Inject
 	private ClientToolbar clientToolbar;
@@ -103,12 +109,14 @@ public class FarmingPatchAdvisorPlugin extends Plugin
 	{
 		contractManager.load();
 		timerManager.load();
+		compostBinManager.load();
 		overlayManager.add(patchOverlay);
 		overlayManager.add(itemOverlay);
 		overlayManager.add(timerOverlay);
 		overlayManager.add(checklistOverlay);
 		overlayManager.add(bankFarmRunOverlay);
 		overlayManager.add(storageScanReminderOverlay);
+		overlayManager.add(compostBinOverlay);
 		patchPanel.start();
 		navigationButton = NavigationButton.builder()
 			.tooltip("Farming Patch Advisor")
@@ -130,6 +138,7 @@ public class FarmingPatchAdvisorPlugin extends Plugin
 		overlayManager.remove(checklistOverlay);
 		overlayManager.remove(bankFarmRunOverlay);
 		overlayManager.remove(storageScanReminderOverlay);
+		overlayManager.remove(compostBinOverlay);
 		if (navigationButton != null)
 		{
 			clientToolbar.removeNavigation(navigationButton);
@@ -138,6 +147,7 @@ public class FarmingPatchAdvisorPlugin extends Plugin
 		patchPanel.stop();
 		bankChecklistFilter.removeButton();
 		patchObjects.clear();
+		compostBinManager.unload();
 		log.debug("Farming Patch Advisor stopped");
 	}
 
@@ -150,12 +160,14 @@ public class FarmingPatchAdvisorPlugin extends Plugin
 			patchObjects.add(object);
 		}
 		timerManager.onPatchObjectSpawned(object);
+		compostBinManager.onGameObjectSpawned(object);
 	}
 
 	@Subscribe
 	public void onGameObjectDespawned(GameObjectDespawned event)
 	{
 		patchObjects.remove(event.getGameObject());
+		compostBinManager.onGameObjectDespawned(event.getGameObject());
 	}
 
 	@Subscribe
@@ -165,15 +177,18 @@ public class FarmingPatchAdvisorPlugin extends Plugin
 		{
 			contractManager.load();
 			timerManager.load();
+			compostBinManager.load();
 		}
 		if (event.getGameState() == GameState.LOADING || event.getGameState() == GameState.LOGIN_SCREEN)
 		{
 			patchObjects.clear();
+			compostBinManager.clearObjects();
 			if (event.getGameState() == GameState.LOGIN_SCREEN)
 			{
 				farmingLoadout.clearStorageSnapshots();
 				timerManager.unload();
 				contractManager.unload();
+				compostBinManager.unload();
 			}
 		}
 	}
@@ -195,6 +210,7 @@ public class FarmingPatchAdvisorPlugin extends Plugin
 	public void onGameTick(GameTick event)
 	{
 		contractManager.checkJaneDialogue();
+		compostBinManager.observeCurrentLocation();
 		for (GameObject object : new HashSet<>(patchObjects))
 		{
 			timerManager.onPatchObjectSpawned(object);
@@ -219,6 +235,7 @@ public class FarmingPatchAdvisorPlugin extends Plugin
 		farmingLoadout.clearStorageSnapshots();
 		contractManager.load();
 		timerManager.load();
+		compostBinManager.load();
 	}
 
 	@Subscribe

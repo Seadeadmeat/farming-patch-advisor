@@ -4,6 +4,7 @@ import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
+import java.util.Set;
 import javax.inject.Inject;
 import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.gameval.ItemID;
@@ -63,6 +64,11 @@ final class FarmingItemOverlay extends WidgetItemOverlay
 
 	private boolean isRequiredItem(int itemId)
 	{
+		Set<Integer> compostItems = farmingLoadout.compostChecklistItemIds();
+		if (compostItems.contains(itemId) || compostItems.contains(ItemVariationMapping.map(itemId)))
+		{
+			return true;
+		}
 		if (RouteTeleport.isTeleportItem(itemId) && farmingLoadout.teleportItemIds().contains(itemId)) { return true; }
 		if (farmingLoadout.isRemedyItem(ItemVariationMapping.map(itemId)))
 		{

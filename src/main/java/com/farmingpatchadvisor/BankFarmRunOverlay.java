@@ -27,13 +27,16 @@ final class BankFarmRunOverlay extends OverlayPanel
 	private final Client client;
 	private final FarmingLoadout farmingLoadout;
 	private final FarmingPatchAdvisorConfig config;
+	private final FarmRunFilterState runFilterState;
 
 	@Inject
-	private BankFarmRunOverlay(Client client, FarmingLoadout farmingLoadout, FarmingPatchAdvisorConfig config)
+	private BankFarmRunOverlay(Client client, FarmingLoadout farmingLoadout, FarmingPatchAdvisorConfig config,
+		FarmRunFilterState runFilterState)
 	{
 		this.client = client;
 		this.farmingLoadout = farmingLoadout;
 		this.config = config;
+		this.runFilterState = runFilterState;
 		setPosition(OverlayPosition.DYNAMIC);
 		setLayer(OverlayLayer.ABOVE_WIDGETS);
 		setPriority(PRIORITY_HIGH);
@@ -60,27 +63,42 @@ final class BankFarmRunOverlay extends OverlayPanel
 			return null;
 		}
 
-		List<FarmingLoadout.ChecklistItem> runChecklist = farmingLoadout.checklist(
-			config.includeCompost(), config.checklistTools(), config.checklistPayments(),
-			ChecklistPatch.selected(config));
-		List<FarmingLoadout.ChecklistItem> contractChecklist = farmingLoadout.contractChecklist(
-			config.checklistPayments());
+		FarmRunFilter selected = runFilterState.getSelected();
+		List<FarmingLoadout.ChecklistItem> runChecklist = selected.isCompostOnly()
+			? java.util.Collections.emptyList() : farmingLoadout.checklist(config.includeCompost(),
+				config.checklistTools(), config.checklistPayments(), ChecklistPatch.selected(config));
+		List<FarmingLoadout.ChecklistItem> contractChecklist = selected.isCompostOnly()
+			? java.util.Collections.emptyList() : farmingLoadout.contractChecklist(config.checklistPayments());
+		List<FarmingLoadout.ChecklistItem> compostChecklist = !seedVaultOpen
+			&& selected.includesCompost(config.includeCompostBinsInFarmRuns())
+			? farmingLoadout.compostChecklist() : java.util.Collections.emptyList();
 		List<FarmingLoadout.ChecklistItem> runIncomplete = incomplete(runChecklist);
 		List<FarmingLoadout.ChecklistItem> contractIncomplete = incomplete(contractChecklist);
+		List<FarmingLoadout.ChecklistItem> compostIncomplete = incomplete(compostChecklist);
 		List<FarmingLoadout.ChecklistItem> teleports = seedVaultOpen
 			? java.util.Collections.emptyList() : farmingLoadout.teleportChecklist();
 
 		// Always reserve room for every contract item before truncating the normal farm-run list.
 		int contractDisplayed = Math.min(MAX_ITEMS, contractIncomplete.size());
-		int runDisplayed = Math.min(runIncomplete.size(), MAX_ITEMS - contractDisplayed);
-		int renderedRows = sectionRows(runIncomplete, runDisplayed)
+		int compostDisplayed = Math.min(compostIncomplete.size(), MAX_ITEMS - contractDisplayed);
+		int runDisplayed = Math.min(runIncomplete.size(), MAX_ITEMS - contractDisplayed - compostDisplayed);
+		int renderedRows = (selected.isCompostOnly() ? 0 : sectionRows(runIncomplete, runDisplayed))
 			+ (contractChecklist.isEmpty() ? 0 : sectionRows(contractIncomplete, contractDisplayed))
+			+ (compostChecklist.isEmpty() ? 0 : sectionRows(compostIncomplete, compostDisplayed))
 			+ (teleports.isEmpty() ? 0 : sectionRows(teleports, teleports.size()));
 		positionNextTo(storage.getBounds(), renderedRows);
 		panelComponent.getChildren().add(TitleComponent.builder()
-			.text(seedVaultOpen ? "Farm Run Seed List" : "Farm Run Bank List").build());
-		renderSection("Farm Run Items", runIncomplete, runDisplayed, "[x] Farm run ready");
+			.text(selected.isCompostOnly() ? "Compost Run Bank List"
+				: seedVaultOpen ? "Farm Run Seed List" : "Farm Run Bank List").build());
+		if (!runChecklist.isEmpty() || !selected.isCompostOnly())
+		{
+			renderSection("Farm Run Items", runIncomplete, runDisplayed, "[x] Farm run ready");
+		}
 		if (!teleports.isEmpty()) { renderSection("Teleports", teleports, teleports.size(), "[x] Teleports ready"); }
+		if (!compostChecklist.isEmpty())
+		{
+			renderSection("Compost Bins", compostIncomplete, compostDisplayed, "[x] Compost supplies ready");
+		}
 		if (!contractChecklist.isEmpty())
 		{
 			renderSection("Farming Contract", contractIncomplete, contractDisplayed,

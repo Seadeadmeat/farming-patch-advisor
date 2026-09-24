@@ -1,5 +1,24 @@
 # Version history
 
+## V1.8 — 2026-09-24
+
+- Added a dedicated **Compost Run** to the Farm Run dropdown for Falador,
+  Morytania, Catherby, Ardougne, Kourend, the Farming Guild, Civitas illa
+  Fortis, and Prifddinas.
+- Added character-specific compost-bin state tracking using RuneLite's current
+  standard and big-bin farming varbits. Cards show contents, fill amount,
+  processing countdown, readiness, and the next useful action.
+- Added clean whole-bin scene outlines: gray when empty or unknown, orange while
+  filling, white while processing, and green when ready or being collected.
+- Added configurable compost targets, individual bin locations, ground
+  highlights, and supply/bucket checklist controls under **Compost bins**.
+- Added compost-run supplies to the movable checklist, bank-side checklist,
+  bank filter, and item highlights. Compost potion bottles count their actual
+  doses, and an owned bottomless compost bucket replaces ordinary buckets.
+- Based the state ranges and regional transmit varbits on RuneLite's open-source
+  Time Tracking farming implementation, with regression tests for standard and
+  Farming Guild big compost-bin states.
+
 ## V1.7 — 2026-09-18
 
 - Fixed the Civitas illa Fortis patch changing from `READY` to `DEAD` when

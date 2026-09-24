@@ -35,8 +35,22 @@ public class FarmRunFilterTest
 		assertTrue(FarmRunFilter.TREE.isAvailable(treeOnly));
 		assertFalse(FarmRunFilter.FRUIT_TREE_CALQUAT.isAvailable(treeOnly));
 		assertFalse(FarmRunFilter.TREE_AND_FRUIT_TREE.isAvailable(treeOnly));
+		assertFalse(FarmRunFilter.COMPOST.isAvailable(treeOnly, false));
+		assertTrue(FarmRunFilter.COMPOST.isAvailable(treeOnly, true));
 
 		EnumSet<FarmRunType> bothTrees = EnumSet.of(FarmRunType.TREE, FarmRunType.FRUIT_TREE_CALQUAT);
 		assertTrue(FarmRunFilter.TREE_AND_FRUIT_TREE.isAvailable(bothTrees));
+	}
+
+	@Test
+	public void compostFilterDoesNotIncludeCropRuns()
+	{
+		for (FarmRunType runType : FarmRunType.values())
+		{
+			assertFalse(FarmRunFilter.COMPOST.includes(runType));
+		}
+		assertTrue(FarmRunFilter.COMPOST.includesCompost(false));
+		assertFalse(FarmRunFilter.ALL.includesCompost(false));
+		assertTrue(FarmRunFilter.ALL.includesCompost(true));
 	}
 }

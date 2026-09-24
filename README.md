@@ -1,6 +1,21 @@
 # Farming Patch Advisor
 
-Current version: **V1.7**. See [version history](CHANGELOG.md).
+Current version: **V1.8**. See [version history](CHANGELOG.md).
+
+### Compost runs
+
+Choose **Compost Run** in the **Farm Run** dropdown to track every enabled compost
+bin in an efficient route. The panel shows each bin's contents, fill amount, processing
+countdown, readiness, and next action. Visible bins receive one clean ground outline,
+with gray for empty or unknown, orange for filling, white for processing, and green
+when ready to collect.
+
+The movable checklist and bank-side checklist include the selected compost ingredient,
+volcanic ash, compost-potion doses, and buckets when needed. A bottomless compost bucket
+replaces ordinary buckets when the player owns one. Configure the target product,
+checklist supplies, highlights, and individual locations under **Compost bins**. Bin
+states are saved separately for each character and are refreshed from RuneLite's live
+farming varbits whenever the location is visited.
 
 ### Custom routes and teleports
 
@@ -26,7 +41,7 @@ All things Farming in one place: plan and track every farming patch, Farming Gui
 
 ## How to use
 
-1. **Configure settings.** Choose a **Seed recommendation**, set any **Crop overrides**, select the patch types for each run, and disable locked areas under **Patch locations**.
+1. **Configure settings.** Choose a **Seed recommendation**, set any **Crop overrides**, configure **Compost bins**, select the patch types for each run, and disable locked areas under **Patch locations**.
 2. **Set up overlays.** Enable **Show timer overlay** and **Show run checklist**, then hold `Alt` in RuneLite to move them. Enable **Bank-side checklist** and choose its side and height for a compact checklist beside the bank or Seed Vault.
 3. **Scan your storage.** Open your bank and the Farming Guild Seed Vault once so recommendations and checklist quantities reflect the seeds, saplings, tools, compost, and payments you own.
 4. **Choose a run.** Open the **Farm Run** side panel and select a run from the dropdown. Patch highlights, timers, checklists, and the bank filter follow that selection.
@@ -53,6 +68,7 @@ All things Farming in one place: plan and track every farming patch, Farming Gui
 - Shows a compact missing-items checklist beside the bank or seed vault, with configurable side and vertical alignment, while temporarily hiding the primary movable checklist.
 - Supports allotment, flower, herb, hops, bush, tree, fruit tree, hardwood, cactus, mushroom, belladonna, calquat, spirit tree, seaweed, grapevine, celastrus, redwood, Hespori, anima, crystal tree, and coral patches.
 - Works offline and uses RuneLite `gameval` item constants rather than hard-coded item IDs.
+- Adds a dedicated **Compost Run** for standard and Farming Guild big compost bins, with live state decoding, persistent timers, whole-bin highlights, per-location controls, and bank/checklist supplies.
 
 Automatic recommendations do not attempt to optimize Grand Exchange profit. Use the per-category crop overrides when a specific crop is preferred.
 

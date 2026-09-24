@@ -19,6 +19,11 @@ final class FarmRunFilterState
 
 	synchronized boolean includes(PatchType patchType)
 	{
-		return selected.includes(FarmRunType.forPatchType(patchType));
+		return !selected.isCompostOnly() && selected.includes(FarmRunType.forPatchType(patchType));
+	}
+
+	synchronized boolean includesCompost(boolean includeWithAll)
+	{
+		return selected.includesCompost(includeWithAll);
 	}
 }

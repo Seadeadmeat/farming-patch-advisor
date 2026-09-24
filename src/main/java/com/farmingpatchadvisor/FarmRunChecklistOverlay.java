@@ -5,6 +5,7 @@ import java.awt.Dimension;
 import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 import java.util.List;
+import java.util.ArrayList;
 import javax.inject.Inject;
 import net.runelite.api.Client;
 import net.runelite.api.gameval.InterfaceID;
@@ -20,13 +21,16 @@ final class FarmRunChecklistOverlay extends OverlayPanel
 	private final FarmingLoadout farmingLoadout;
 	private final FarmingPatchAdvisorConfig config;
 	private final Client client;
+	private final FarmRunFilterState runFilterState;
 
 	@Inject
-	private FarmRunChecklistOverlay(FarmingLoadout farmingLoadout, FarmingPatchAdvisorConfig config, Client client)
+	private FarmRunChecklistOverlay(FarmingLoadout farmingLoadout, FarmingPatchAdvisorConfig config, Client client,
+		FarmRunFilterState runFilterState)
 	{
 		this.farmingLoadout = farmingLoadout;
 		this.config = config;
 		this.client = client;
+		this.runFilterState = runFilterState;
 		setPosition(OverlayPosition.TOP_RIGHT);
 		setLayer(OverlayLayer.ABOVE_WIDGETS);
 		setPriority(PRIORITY_LOW);
@@ -39,21 +43,39 @@ final class FarmRunChecklistOverlay extends OverlayPanel
 		{
 			return null;
 		}
-		List<FarmingLoadout.ChecklistItem> checklist = farmingLoadout.checklist(
-			config.includeCompost(), config.checklistTools(), config.checklistPayments(),
-			ChecklistPatch.selected(config));
+		FarmRunFilter selected = runFilterState.getSelected();
+		List<FarmingLoadout.ChecklistItem> checklist = new ArrayList<>();
+		if (!selected.isCompostOnly())
+		{
+			checklist.addAll(farmingLoadout.checklist(config.includeCompost(), config.checklistTools(),
+				config.checklistPayments(), ChecklistPatch.selected(config)));
+		}
 		FontMetrics metrics = graphics.getFontMetrics();
-		int contentWidth = metrics.stringWidth("Farm Run Checklist");
-		panelComponent.getChildren().add(TitleComponent.builder().text("Farm Run Checklist").build());
+		String title = selected.isCompostOnly() ? "Compost Run Checklist" : "Farm Run Checklist";
+		int contentWidth = metrics.stringWidth(title);
+		panelComponent.getChildren().add(TitleComponent.builder().text(title).build());
 		int teleportStart = checklist.size();
-		checklist.addAll(farmingLoadout.teleportChecklist());
+		if (!selected.isCompostOnly())
+		{
+			checklist.addAll(farmingLoadout.teleportChecklist());
+		}
+		int compostStart = checklist.size();
+		if (selected.includesCompost(config.includeCompostBinsInFarmRuns()))
+		{
+			checklist.addAll(farmingLoadout.compostChecklist());
+		}
 		int index = 0;
 		for (FarmingLoadout.ChecklistItem item : checklist)
 		{
-			if (index++ == teleportStart)
+			if (!selected.isCompostOnly() && index == teleportStart)
 			{
 				panelComponent.getChildren().add(LineComponent.builder().left("Teleports").leftColor(Color.ORANGE).build());
 			}
+			if (index == compostStart && compostStart < checklist.size())
+			{
+				panelComponent.getChildren().add(LineComponent.builder().left("Compost Bins").leftColor(Color.ORANGE).build());
+			}
+			index++;
 			boolean complete = item.getOwned() >= item.getNeeded();
 			String amount = item.amount();
 			String label = (complete ? "[x] " : "[ ] ") + item.getName();

@@ -37,7 +37,10 @@ public interface FarmingPatchAdvisorConfig extends Config
 	@ConfigSection(name = "Specialty patch run", description = "Special-purpose and unique farming patches", position = 24)
 	String specialtyRunSection = "specialtyRunSection";
 
-	@ConfigSection(name = "Patch locations", description = "Exclude areas you have not unlocked yet", position = 25, closedByDefault = true)
+	@ConfigSection(name = "Compost bins", description = "Configure compost-bin tracking and run supplies", position = 25, closedByDefault = true)
+	String compostBinsSection = "compostBinsSection";
+
+	@ConfigSection(name = "Patch locations", description = "Exclude areas you have not unlocked yet", position = 26, closedByDefault = true)
 	String patchLocationsSection = "patchLocationsSection";
 
 	@ConfigItem(
@@ -258,6 +261,47 @@ public interface FarmingPatchAdvisorConfig extends Config
 	{
 		return true;
 	}
+
+	@ConfigItem(keyName = "enableCompostBins", name = "Enable compost bins",
+		description = "Track compost bins and make Compost Run available in the side panel", position = 0, section = compostBinsSection)
+	default boolean enableCompostBins() { return true; }
+
+	@ConfigItem(keyName = "includeCompostBinsInFarmRuns", name = "Include with farm runs",
+		description = "Also show compost bins while All is selected", position = 1, section = compostBinsSection)
+	default boolean includeCompostBinsInFarmRuns() { return false; }
+
+	@ConfigItem(keyName = "compostTarget", name = "Target compost",
+		description = "Choose the compost product and supplies recommended for the run", position = 2, section = compostBinsSection)
+	default CompostTarget compostTarget() { return CompostTarget.ULTRACOMPOST; }
+
+	@ConfigItem(keyName = "highlightCompostBins", name = "Highlight compost bins",
+		description = "Outline compost bins and show their current state in the scene", position = 3, section = compostBinsSection)
+	default boolean highlightCompostBins() { return true; }
+
+	@ConfigItem(keyName = "checklistCompostSupplies", name = "Checklist supplies",
+		description = "Include compost ingredients and processing supplies in the checklist", position = 4, section = compostBinsSection)
+	default boolean checklistCompostSupplies() { return true; }
+
+	@ConfigItem(keyName = "checklistCompostBuckets", name = "Checklist buckets",
+		description = "Include enough buckets, or a bottomless compost bucket, for collection", position = 5, section = compostBinsSection)
+	default boolean checklistCompostBuckets() { return true; }
+
+	@ConfigItem(keyName = "compostFalador", name = "Falador", description = "Include the Falador compost bin", position = 10, section = compostBinsSection)
+	default boolean compostFalador() { return true; }
+	@ConfigItem(keyName = "compostMorytania", name = "Morytania", description = "Include the Morytania compost bin", position = 11, section = compostBinsSection)
+	default boolean compostMorytania() { return true; }
+	@ConfigItem(keyName = "compostCatherby", name = "Catherby", description = "Include the Catherby compost bin", position = 12, section = compostBinsSection)
+	default boolean compostCatherby() { return true; }
+	@ConfigItem(keyName = "compostArdougne", name = "Ardougne", description = "Include the Ardougne compost bin", position = 13, section = compostBinsSection)
+	default boolean compostArdougne() { return true; }
+	@ConfigItem(keyName = "compostKourend", name = "Kourend", description = "Include the Kourend compost bin", position = 14, section = compostBinsSection)
+	default boolean compostKourend() { return true; }
+	@ConfigItem(keyName = "compostFarmingGuild", name = "Farming Guild", description = "Include the Farming Guild big compost bin", position = 15, section = compostBinsSection)
+	default boolean compostFarmingGuild() { return true; }
+	@ConfigItem(keyName = "compostCivitas", name = "Civitas illa Fortis", description = "Include the Civitas illa Fortis compost bin", position = 16, section = compostBinsSection)
+	default boolean compostCivitas() { return true; }
+	@ConfigItem(keyName = "compostPrifddinas", name = "Prifddinas", description = "Include the Prifddinas compost bin", position = 17, section = compostBinsSection)
+	default boolean compostPrifddinas() { return true; }
 
 	@ConfigItem(keyName = "includeMorytania", name = "Morytania", description = "Include patches in Morytania", position = 0, section = patchLocationsSection)
 	default boolean includeMorytania() { return true; }
