@@ -1,5 +1,16 @@
 # Version history
 
+## V1.9 — 2026-09-24
+
+- Fixed the RuneLite client appearing frozen when **Compost Run** was opened by
+  making the compost target config enum accessible to RuneLite's config proxy.
+- Removed the duplicate fill quantity from compost action text. Filling bins now
+  show the amount once in `Status: FILLING x/x`, followed by a clean action such
+  as `Add Watermelon`.
+- Confirmed in-game on Sir_deadmeat that standard and big-bin capacities, state
+  transitions, timers, persistence, settings synchronization, scene highlights,
+  movable checklist, bank-side checklist, and bank filter all work correctly.
+
 ## V1.8 — 2026-09-24
 
 - Added a dedicated **Compost Run** to the Farm Run dropdown for Falador,

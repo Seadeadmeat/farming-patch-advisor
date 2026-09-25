@@ -1,6 +1,6 @@
 # Farming Patch Advisor
 
-Current version: **V1.8**. See [version history](CHANGELOG.md).
+Current version: **V1.9**. See [version history](CHANGELOG.md).
 
 ### Compost runs
 

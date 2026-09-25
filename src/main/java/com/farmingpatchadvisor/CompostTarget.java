@@ -2,7 +2,7 @@ package com.farmingpatchadvisor;
 
 import net.runelite.api.gameval.ItemID;
 
-enum CompostTarget
+public enum CompostTarget
 {
 	COMPOST("Compost", CompostProduct.COMPOST, "Weeds", ItemID.WEEDS),
 	SUPERCOMPOST("Supercompost", CompostProduct.SUPERCOMPOST, "Watermelon", ItemID.WATERMELON),

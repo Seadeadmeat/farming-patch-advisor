@@ -223,7 +223,7 @@ final class CompostBinManager
 				return "Add " + target.getIngredientName() + " 0/" + location.getCapacity();
 			case FILLING:
 				return state.getAmount() >= location.getCapacity() ? "Close lid"
-					: "Add " + target.getIngredientName() + " " + state.getAmount() + "/" + location.getCapacity();
+					: "Add " + target.getIngredientName();
 			case PROCESSING:
 				return state.isReady(Instant.now()) ? "Open lid" : target == CompostTarget.ULTRACOMPOST
 					? "Next: Add volcanic ash x" + (location.isBig() ? 50 : 25) : "Wait for compost";
