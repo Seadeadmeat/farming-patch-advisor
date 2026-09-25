@@ -36,8 +36,12 @@ final class FarmRouteManager
 
 	List<FarmRunPatch> activePatches()
 	{
+		return activePatches(filter.getSelected());
+	}
+
+	List<FarmRunPatch> activePatches(FarmRunFilter run)
+	{
 		List<FarmRunPatch> patches = availablePatches();
-		FarmRunFilter run = filter.getSelected();
 		String included = read("routeIncluded_" + run.name());
 		if (isCustom(run) && included != null)
 		{
@@ -45,9 +49,9 @@ final class FarmRouteManager
 		}
 		else
 		{
-			patches.removeIf(p -> !filter.includes(p.getPatchType()));
+			patches.removeIf(p -> !run.includes(p.getFarmRunType()));
 		}
-		return ordered(patches, filter.getSelected());
+		return ordered(patches, run);
 	}
 
 	List<FarmRunPatch> availablePatches()

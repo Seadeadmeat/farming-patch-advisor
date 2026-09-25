@@ -1,5 +1,23 @@
 # Version history
 
+## V1.10 — 2026-09-24
+
+- Added a **Farm run** selector inside **Route & Teleports** containing every
+  enabled crop-run option currently available in the side-panel dropdown.
+- Switching runs inside the pop-out now loads that run's independent patch
+  order, membership, and teleport selections without closing the editor.
+- Keeps edits for every visited run as drafts and saves them together only when
+  **Save route** is selected; **Cancel** still discards all changes.
+- Each selected patch continues to offer only travel methods that reasonably
+  serve its location, allowing players to choose the method they own and use.
+- Groups allotment and flower patches at the same farming location into one
+  route stop displaying only the location name. The shared teleport choice is
+  applied to every underlying allotment and flower patch at that stop.
+- Added **Reset selected run**, which restores the active run's default order,
+  membership, and `None / no item needed` teleport choices when the editor is saved.
+- Added regression coverage for run-selector availability, combined tree runs,
+  and lossless grouped-stop expansion.
+
 ## V1.9 — 2026-09-24
 
 - Fixed the RuneLite client appearing frozen when **Compost Run** was opened by

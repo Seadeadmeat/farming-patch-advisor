@@ -1,6 +1,7 @@
 package com.farmingpatchadvisor;
 
 import java.util.EnumSet;
+import java.util.List;
 import org.junit.Test;
 
 import static org.junit.Assert.assertFalse;
@@ -52,5 +53,19 @@ public class FarmRunFilterTest
 		assertTrue(FarmRunFilter.COMPOST.includesCompost(false));
 		assertFalse(FarmRunFilter.ALL.includesCompost(false));
 		assertTrue(FarmRunFilter.ALL.includesCompost(true));
+	}
+
+	@Test
+	public void routeEditorOffersEveryAvailableCropRun()
+	{
+		List<FarmRunFilter> filters = FarmRouteEditor.availableRuns(EnumSet.of(
+			FarmRunType.HERB, FarmRunType.TREE, FarmRunType.FRUIT_TREE_CALQUAT));
+		assertTrue(filters.contains(FarmRunFilter.ALL));
+		assertTrue(filters.contains(FarmRunFilter.HERB));
+		assertTrue(filters.contains(FarmRunFilter.TREE));
+		assertTrue(filters.contains(FarmRunFilter.FRUIT_TREE_CALQUAT));
+		assertTrue(filters.contains(FarmRunFilter.TREE_AND_FRUIT_TREE));
+		assertFalse(filters.contains(FarmRunFilter.ALLOTMENT_FLOWER));
+		assertFalse(filters.contains(FarmRunFilter.COMPOST));
 	}
 }

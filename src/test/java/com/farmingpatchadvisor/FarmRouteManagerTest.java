@@ -89,4 +89,29 @@ public class FarmRouteManagerTest
 		FarmRunPatch sailingOnly = new FarmRunPatch("Anglers' Retreat", "", PatchType.HARDWOOD_TREE);
 		assertArrayEquals(new RouteTeleport[]{RouteTeleport.NONE}, RouteTeleport.viableValues(sailingOnly));
 	}
+
+	@Test public void routeEditorGroupsAllotmentsAndFlowerAtOneLocation()
+	{
+		FarmRunPatch allotmentOne = new FarmRunPatch("Falador", "Allotment 1", PatchType.ALLOTMENT);
+		FarmRunPatch allotmentTwo = new FarmRunPatch("Falador", "Allotment 2", PatchType.ALLOTMENT);
+		FarmRunPatch flower = new FarmRunPatch("Falador", "", PatchType.FLOWER);
+		FarmRunPatch herb = new FarmRunPatch("Falador", "", PatchType.HERB);
+		Map<String, RouteTeleport> choices = new LinkedHashMap<>();
+		choices.put(FarmRouteManager.key(allotmentOne), RouteTeleport.EXPLORER_4);
+		choices.put(FarmRouteManager.key(allotmentTwo), RouteTeleport.FALADOR);
+		choices.put(FarmRouteManager.key(flower), RouteTeleport.FALADOR);
+		choices.put(FarmRouteManager.key(herb), RouteTeleport.FALADOR);
+
+		FarmRouteEditor.RouteDraft draft = FarmRouteEditor.groupedDraft(
+			Arrays.asList(allotmentOne, allotmentTwo, flower, herb), choices, false);
+		assertEquals(2, draft.displayedPatches().size());
+		assertEquals("Falador", draft.displayedPatches().get(0).getDisplayName());
+		assertEquals(Arrays.asList(allotmentOne, allotmentTwo, flower, herb), draft.expandedPatches());
+		assertEquals(RouteTeleport.EXPLORER_4,
+			draft.expandedChoices().get(FarmRouteManager.key(allotmentTwo)));
+		assertEquals(RouteTeleport.EXPLORER_4,
+			draft.expandedChoices().get(FarmRouteManager.key(flower)));
+		assertEquals(RouteTeleport.FALADOR,
+			draft.expandedChoices().get(FarmRouteManager.key(herb)));
+	}
 }

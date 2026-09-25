@@ -1,6 +1,6 @@
 # Farming Patch Advisor
 
-Current version: **V1.9**. See [version history](CHANGELOG.md).
+Current version: **V1.10**. See [version history](CHANGELOG.md).
 
 ### Compost runs
 
@@ -19,12 +19,19 @@ farming varbits whenever the location is visited.
 
 ### Custom routes and teleports
 
-Choose your run in **Farm Run**, then open **Route & Teleports**. Select a patch
+Choose your run in **Farm Run**, then open **Route & Teleports**. The pop-out's
+**Farm run** dropdown can switch among every currently enabled crop run without
+closing the editor. Select a patch
 and choose its teleport. Drag stops or use **Move up / Move down**, then **Save route**.
+Locations containing both allotment and flower patches appear as one stop using
+only the location name and one shared teleport choice.
 Use **New custom route**, **Add patches**, and **Remove selected** to build a
 route from the enabled patches in that run. Each patch only offers teleports that
 reasonably serve its area; `None / no item needed` is always available.
+Use **Reset selected run** to restore that run's default stops and clear its
+teleport choices; the reset is applied only after **Save route**.
 Choose **Default** to reset the order, or **Cancel** to discard edits.
+Changes made to multiple runs are kept as drafts until **Save route** is selected.
 Orders and teleport choices are saved separately for each character and run selection.
 Only enabled patches and locations appear. Custom order controls panel and ground-label
 patch numbers, including combined runs.
