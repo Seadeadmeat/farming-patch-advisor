@@ -14,6 +14,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import javax.inject.Inject;
 import javax.swing.BorderFactory;
@@ -54,7 +55,10 @@ final class FarmingPatchPanel extends PluginPanel
 	private final JPanel patches = new JPanel();
 	private final JScrollPane patchScrollPane;
 	private final Timer refreshTimer;
+	private final List<Runnable> liveUpdates = new ArrayList<>();
 	private boolean updatingRunFilter;
+	private int renderedModelFingerprint;
+	private volatile boolean rebuildRequested = true;
 
 	@Inject
 	private FarmingPatchPanel(PatchTimerManager timerManager, FarmingPatchAdvisorConfig config,
@@ -138,7 +142,7 @@ final class FarmingPatchPanel extends PluginPanel
 		styleNarrowScrollBar(patchScrollPane);
 		add(patchScrollPane, BorderLayout.CENTER);
 
-		refreshTimer = new Timer(1000, event -> rebuild());
+		refreshTimer = new Timer(1000, event -> refreshPanel());
 		refreshTimer.start();
 		rebuild();
 	}
@@ -157,8 +161,61 @@ final class FarmingPatchPanel extends PluginPanel
 		rebuild();
 	}
 
+	void requestRebuild()
+	{
+		rebuildRequested = true;
+	}
+
+	private void refreshPanel()
+	{
+		if (!isShowing())
+		{
+			return;
+		}
+
+		int fingerprint = modelFingerprint();
+		if (rebuildRequested || fingerprint != renderedModelFingerprint)
+		{
+			rebuild();
+			return;
+		}
+
+		updateChecklistButton();
+		for (Runnable update : liveUpdates)
+		{
+			update.run();
+		}
+		patches.repaint();
+	}
+
+	private int modelFingerprint()
+	{
+		FarmingContract contract = contractManager.getContract();
+		int hash = Objects.hash(runFilterState.getSelected(), config.showFarmingContract(),
+			contract == null ? 0 : contract.getCrop().getItemId());
+		for (PatchTimer timer : timerManager.getTimers())
+		{
+			hash = 31 * hash + Objects.hash(timer.key(), timer.getCrop().getItemId(),
+				timer.getPlantedAt(), timer.getReadyAt(), timer.isPlantedTimer(),
+				timer.getObservedStage(), timer.getTotalStages(), timer.isDead(),
+				timer.isDiseased(), timer.isPicked(), timer.isCompostApplied(), timer.isWatered());
+		}
+		for (CompostBinLocation location : compostBinManager.enabledLocations())
+		{
+			CompostBinState state = compostBinManager.getState(location);
+			hash = 31 * hash + location.hashCode();
+			if (state != null)
+			{
+				hash = 31 * hash + Objects.hash(state.getProduct(), state.getPhase(), state.getAmount(),
+					state.getStage(), state.getObservedAt(), state.getReadyAt());
+			}
+		}
+		return hash;
+	}
+
 	private void rebuild()
 	{
+		liveUpdates.clear();
 		updateChecklistButton();
 		patches.removeAll();
 		Set<ChecklistPatch> selectedPatches = ChecklistPatch.selected(config);
@@ -179,8 +236,7 @@ final class FarmingPatchPanel extends PluginPanel
 		if (selectedFilter.isCompostOnly())
 		{
 			addCompostSection();
-			patches.revalidate();
-			patches.repaint();
+			finishRebuild();
 			return;
 		}
 		if (routes.isCustom(runFilterState.getSelected()))
@@ -192,8 +248,7 @@ final class FarmingPatchPanel extends PluginPanel
 					: createTrackedCard(order++, patch, matching));
 				patches.add(Box.createRigidArea(new Dimension(0, 5)));
 			}
-			patches.revalidate();
-			patches.repaint();
+			finishRebuild();
 			return;
 		}
 		for (FarmRunType runType : FarmRunType.values())
@@ -242,6 +297,13 @@ final class FarmingPatchPanel extends PluginPanel
 		{
 			addCompostSection();
 		}
+		finishRebuild();
+	}
+
+	private void finishRebuild()
+	{
+		renderedModelFingerprint = modelFingerprint();
+		rebuildRequested = false;
 		patches.revalidate();
 		patches.repaint();
 	}
@@ -425,14 +487,20 @@ final class FarmingPatchPanel extends PluginPanel
 		}
 		else
 		{
-			Instant now = Instant.now();
-			boolean ready = !timer.isDead() && !timer.isDiseased() && !timer.isPicked()
-				&& !now.isBefore(timer.getReadyAt());
-			addLine(card, "Status: " + (timer.isDead() ? "DEAD" : timer.isDiseased() ? "DISEASED"
-				: timer.isPicked() ? "PICKED"
-				: ready ? "READY"
-				: PatchTimerOverlay.formatRemaining(Duration.between(now, timer.getReadyAt()))),
-				PatchTimerOverlay.stateColor(timer, now), true);
+			JLabel status = addLine(card, "", Color.WHITE, true);
+			Runnable updateStatus = () ->
+			{
+				Instant now = Instant.now();
+				boolean ready = !timer.isDead() && !timer.isDiseased() && !timer.isPicked()
+					&& !now.isBefore(timer.getReadyAt());
+				setLine(status, "Status: " + (timer.isDead() ? "DEAD" : timer.isDiseased() ? "DISEASED"
+					: timer.isPicked() ? "PICKED"
+					: ready ? "READY"
+					: PatchTimerOverlay.formatRemaining(Duration.between(now, timer.getReadyAt()))),
+					PatchTimerOverlay.stateColor(timer, now));
+			};
+			updateStatus.run();
+			liveUpdates.add(updateStatus);
 			String remedy = PatchRemedy.forTimer(timer);
 			if (remedy != null)
 			{
@@ -499,29 +567,50 @@ final class FarmingPatchPanel extends PluginPanel
 		Instant now = Instant.now();
 		Color color = compostStateColor(state, now);
 		JPanel card = createCard(!Color.WHITE.equals(color) && !Color.LIGHT_GRAY.equals(color), color);
-		addLine(card, order + ". " + location.getDisplayName(), color, true);
+		JLabel title = addLine(card, order + ". " + location.getDisplayName(), color, true);
 		card.add(Box.createRigidArea(new Dimension(0, 3)));
 		addLine(card, "Bin: " + location.getBinName(), Color.LIGHT_GRAY, false);
+		JLabel status = null;
 		if (state == null)
 		{
 			addLine(card, "Status: Not inspected", Color.GRAY, false);
 		}
 		else
 		{
-			String status = CompostBinManager.remaining(state, now);
-			if (status == null)
+			String statusText = CompostBinManager.remaining(state, now);
+			if (statusText == null)
 			{
-				status = state.getPhase() == CompostBinPhase.FILLING
+				statusText = state.getPhase() == CompostBinPhase.FILLING
 					? "FILLING " + state.getAmount() + "/" + location.getCapacity()
 					: state.getPhase().toString();
 			}
-			addLine(card, "Status: " + status, color, true);
+			status = addLine(card, "Status: " + statusText, color, true);
 			if (state.getProduct() != CompostProduct.EMPTY && state.getProduct() != CompostProduct.UNKNOWN)
 			{
 				addLine(card, "Contents: " + compostProductName(state.getProduct()), Color.LIGHT_GRAY, false);
 			}
 		}
 		addLine(card, compostBinManager.nextAction(location, state), Color.LIGHT_GRAY, false);
+		if (state != null)
+		{
+			JLabel liveStatus = status;
+			Runnable updateStatus = () ->
+			{
+				Instant current = Instant.now();
+				Color currentColor = compostStateColor(state, current);
+				String statusText = CompostBinManager.remaining(state, current);
+				if (statusText == null)
+				{
+					statusText = state.getPhase() == CompostBinPhase.FILLING
+						? "FILLING " + state.getAmount() + "/" + location.getCapacity()
+						: state.getPhase().toString();
+				}
+				setLine(title, order + ". " + location.getDisplayName(), currentColor);
+				setLine(liveStatus, "Status: " + statusText, currentColor);
+				setCardState(card, currentColor);
+			};
+			liveUpdates.add(updateStatus);
+		}
 		JPopupMenu menu = new JPopupMenu();
 		JMenuItem reset = new JMenuItem("Reset " + location.getDisplayName());
 		reset.addActionListener(event -> compostBinManager.reset(location));
@@ -631,7 +720,7 @@ final class FarmingPatchPanel extends PluginPanel
 		boolean attention = !Color.WHITE.equals(cardStateColor);
 		RouteTeleport teleport = routes.teleport(runFilterState.getSelected(), patch);
 		JPanel card = createCard(attention, cardStateColor);
-		addLine(card, order + ". " + patch.getDisplayName(), cardStateColor, true);
+		JLabel title = addLine(card, order + ". " + patch.getDisplayName(), cardStateColor, true);
 		card.add(Box.createRigidArea(new Dimension(0, 3)));
 		addLine(card, "Patch: " + patch.getPatchType().getDisplayName()
 			+ (patch.getPatchCount() > 1 ? " (" + matchingTimers.size() + "/" + patch.getPatchCount() + " tracked)" : ""),
@@ -643,24 +732,45 @@ final class FarmingPatchPanel extends PluginPanel
 			String prefix = matchingTimers.size() > 1 ? timerNumber++ + ". " : "";
 			addLine(card, prefix + "Planted: " + timer.getCrop().getName(), Color.LIGHT_GRAY, false);
 			addLine(card, (timer.isPlantedTimer() ? "Started: " : "Inspected: ") + CLOCK.format(timer.getPlantedAt()), Color.LIGHT_GRAY, false);
+			JLabel stage = null;
 			if (!timer.isPlantedTimer() && !timer.isDead() && !timer.isDiseased() && !timer.isPicked())
 			{
-				addLine(card, "Stage: " + timer.getEstimatedStage(now) + "/" + timer.getTotalStages() + " (maximum estimate)", Color.LIGHT_GRAY, false);
+				stage = addLine(card, "Stage: " + timer.getEstimatedStage(now) + "/" + timer.getTotalStages() + " (maximum estimate)", Color.LIGHT_GRAY, false);
 			}
-			boolean timerReady = !timer.isDead() && !timer.isDiseased() && !timer.isPicked()
-				&& !now.isBefore(timer.getReadyAt());
-			String remaining = timer.isDead() ? "DEAD" : timer.isDiseased() ? "DISEASED"
-				: timer.isPicked() ? "PICKED"
-				: timerReady ? "READY"
-				: PatchTimerOverlay.formatRemaining(Duration.between(now, timer.getReadyAt()));
-			addLine(card, "Time remaining: " + remaining,
-				PatchTimerOverlay.stateColor(timer, now), true);
+			JLabel remainingLabel = addLine(card, "", Color.WHITE, true);
+			JLabel liveStage = stage;
+			Runnable updateTimer = () ->
+			{
+				Instant current = Instant.now();
+				if (liveStage != null)
+				{
+					setLine(liveStage, "Stage: " + timer.getEstimatedStage(current) + "/"
+						+ timer.getTotalStages() + " (maximum estimate)", Color.LIGHT_GRAY);
+				}
+				boolean timerReady = !timer.isDead() && !timer.isDiseased() && !timer.isPicked()
+					&& !current.isBefore(timer.getReadyAt());
+				String remaining = timer.isDead() ? "DEAD" : timer.isDiseased() ? "DISEASED"
+					: timer.isPicked() ? "PICKED"
+					: timerReady ? "READY"
+					: PatchTimerOverlay.formatRemaining(Duration.between(current, timer.getReadyAt()));
+				setLine(remainingLabel, "Time remaining: " + remaining,
+					PatchTimerOverlay.stateColor(timer, current));
+			};
+			updateTimer.run();
+			liveUpdates.add(updateTimer);
 			String remedy = PatchRemedy.forTimer(timer);
 			if (remedy != null)
 			{
 				addLine(card, "Remedy: " + remedy, Color.LIGHT_GRAY, false);
 			}
 		}
+		Runnable updateCard = () ->
+		{
+			Color currentColor = combinedStateColor(matchingTimers, Instant.now());
+			setLine(title, order + ". " + patch.getDisplayName(), currentColor);
+			setCardState(card, currentColor);
+		};
+		liveUpdates.add(updateCard);
 		addResetMenu(card, patch);
 		return finishCard(card);
 	}
@@ -719,10 +829,16 @@ final class FarmingPatchPanel extends PluginPanel
 		card.setMinimumSize(new Dimension(PANEL_WIDTH - 28, 0));
 		card.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
 		card.setBackground(ColorScheme.DARKER_GRAY_COLOR);
-		card.setBorder(BorderFactory.createCompoundBorder(
-			BorderFactory.createLineBorder(ready ? readyColor : ColorScheme.BORDER_COLOR),
-			BorderFactory.createEmptyBorder(6, 8, 6, 8)));
+		setCardState(card, ready ? readyColor : Color.WHITE);
 		return card;
+	}
+
+	private static void setCardState(JPanel card, Color stateColor)
+	{
+		boolean attention = !Color.WHITE.equals(stateColor) && !Color.LIGHT_GRAY.equals(stateColor);
+		card.setBorder(BorderFactory.createCompoundBorder(
+			BorderFactory.createLineBorder(attention ? stateColor : ColorScheme.BORDER_COLOR),
+			BorderFactory.createEmptyBorder(6, 8, 6, 8)));
 	}
 
 	private static JPanel finishCard(JPanel card)
@@ -734,17 +850,24 @@ final class FarmingPatchPanel extends PluginPanel
 		return card;
 	}
 
-	private static void addLine(JPanel card, String text, Color color, boolean bold)
+	private static JLabel addLine(JPanel card, String text, Color color, boolean bold)
 	{
-		String escaped = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
-		JLabel label = new JLabel("<html><body style='width:170px'>" + escaped + "</body></html>");
+		JLabel label = new JLabel();
 		label.setAlignmentX(Component.LEFT_ALIGNMENT);
 		label.setHorizontalAlignment(JLabel.LEFT);
-		label.setForeground(color);
+		setLine(label, text, color);
 		if (bold)
 		{
 			label.setFont(label.getFont().deriveFont(Font.BOLD));
 		}
 		card.add(label);
+		return label;
+	}
+
+	private static void setLine(JLabel label, String text, Color color)
+	{
+		String escaped = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
+		label.setText("<html><body style='width:170px'>" + escaped + "</body></html>");
+		label.setForeground(color);
 	}
 }

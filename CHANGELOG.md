@@ -1,5 +1,15 @@
 # Version history
 
+## V1.11 — 2026-09-26
+
+- Fixed stuttering and short freezes when **All** is selected in the Farm Run
+  side panel.
+- The panel now preserves its existing cards and updates countdowns, growth
+  stages, status colors, and compost timers in place once per second.
+- Full card reconstruction now happens only when the underlying patch,
+  contract, compost-bin, inventory, route, or plugin-setting data changes.
+- Hidden side panels no longer perform periodic visual refresh work.
+
 ## V1.10 — 2026-09-24
 
 - Added a **Farm run** selector inside **Route & Teleports** containing every

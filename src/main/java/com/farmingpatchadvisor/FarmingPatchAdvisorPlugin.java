@@ -33,6 +33,7 @@ import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
+import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.events.ProfileChanged;
 import net.runelite.client.events.RuneScapeProfileChanged;
 import net.runelite.client.plugins.Plugin;
@@ -242,6 +243,16 @@ public class FarmingPatchAdvisorPlugin extends Plugin
 	public void onItemContainerChanged(ItemContainerChanged event)
 	{
 		farmingLoadout.onItemContainerChanged(event);
+		patchPanel.requestRebuild();
+	}
+
+	@Subscribe
+	public void onConfigChanged(ConfigChanged event)
+	{
+		if ("farming-patch-advisor".equals(event.getGroup()))
+		{
+			patchPanel.requestRebuild();
+		}
 	}
 
 	@Subscribe
